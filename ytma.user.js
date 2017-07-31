@@ -486,6 +486,8 @@ Whitelist these on Ghostery
 						var max = 10, count = 1, intr = window.setInterval(function () {
 							console.log('inside says: ', count, !!window.yt);
 							if (window.yt && window.player) {
+								window.clearInterval(intr);
+
 								var p = window.yt.player.getPlayerByElement(window.player);
 
 								if (document.body.hasAttribute('gm-player-quality')) {
@@ -497,8 +499,6 @@ Whitelist these on Ghostery
 									console.log('inside says: setting volume to ', document.body.getAttribute('gm-player-volume'));
 									p.setVolume(document.body.getAttribute('gm-player-volume'));
 								}
-
-								window.clearInterval(intr);
 							} else {
 								console.log(count);
 								count += 1;
