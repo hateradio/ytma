@@ -1,10 +1,16 @@
 {
   "name": "ytma",
-  "version": "7.2",
+  "version": "7.2.1.0",
   "description": "ytma! automatically converts YouTube(TM), Vimeo, Vine, Soundcloud, WebM, and MP4 links into real embedded videos.",
-  "main": "ytma.user.js",
+  "main": "Gruntfile.js",
   "directories": {
     "doc": "docs"
+  },
+  "dependencies": {
+    "archiver": "^2.0.0"
+  },
+  "devDependencies": {
+    "grunt": "^1.0.1"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -14,16 +20,13 @@
     "url": "git+https://github.com/hateradio/ytma.git"
   },
   "keywords": [
-    "neogaf",
-    "ytma"
+    "ytma",
+    "neogaf"
   ],
   "author": "hateradio",
   "license": "",
   "bugs": {
     "url": "https://github.com/hateradio/ytma/issues"
   },
-  "homepage": "https://github.com/hateradio/ytma#readme",
-  "devDependencies": {
-    "grunt": "^1.0.1"
-  }
+  "homepage": "https://github.com/hateradio/ytma#readme"
 }

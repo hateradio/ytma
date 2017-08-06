@@ -13,6 +13,12 @@ _aka ytma!_
 
 ## Updates
 
+#### 7.2.1
+
+* New: Extension info
+* Updates JSHint options
+* Removes outdated @include links
+
 #### 7.2
 
 * New: CSS rule to make videos fit within smaller windows
@@ -49,8 +55,8 @@ _aka ytma!_
 * Patched back Gfycat iFrame setting for Safari (it is incompatible with new settings)
 * Updates YouTube data API
 * Removes:
-    * Object tag for YouTube for Flash (Deprecated)
-    * "Batch" loading of descriptions (Only manual and scroll methods are supported)
+	* Object tag for YouTube for Flash (Deprecated)
+	* "Batch" loading of descriptions (Only manual and scroll methods are supported)
 
 ## Previous Additions
 

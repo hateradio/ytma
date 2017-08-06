@@ -11,3 +11,4 @@ test/
 target/
 *.map
 node_modules/
+extension.zip

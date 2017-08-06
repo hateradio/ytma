@@ -1,4 +1,4 @@
-/*jslint indent: 4, maxerr: 50, browser: true, devel: true, sub: false, fragment: false, nomen: true, plusplus: true, bitwise: true, regexp: true, newcap: true */
+/*jslint maxerr: 500, browser: true, devel: true, bitwise: true, white: true */
 // ==UserScript==
 // Do not modify and re-release this script!
 // If you would like to add support for other sites, please tell me and I'll put it in the includes.
@@ -7,7 +7,7 @@
 // @name           YouTube Me Again!
 // @namespace      hateradio)))
 // @author         hateradio
-// @version        7.2
+// @version        7.2.1
 // @description    ytma! automatically converts YouTube(TM), Vimeo, Vine, Soundcloud, WebM, and MP4 links into real embedded videos.
 // @homepage       https://greasyfork.org/en/scripts/1023-youtube-me-again
 // @updateURL      https://greasyfork.org/scripts/1023-youtube-me-again/code/YouTube%20Me%20Again!.meta.js
@@ -39,15 +39,7 @@
 // @match          *://*.neogaf.com/forum/editpost.php*
 // @match          *://*.neogaf.com/forum/private.php*
 
-// @include        http*://*what.cd/forums.php?*viewthread*
-// @include        http*://*what.cd/torrents.php?*
-// @include        http*://*what.cd/user.php?*
-
-// @match          *://*.what.cd/forums.php?*viewthread*
-// @match          *://*.what.cd/torrents.php?*
-// @match          *://*.what.cd/user.php?*
-
-// @updated        03 Jul 2017
+// @updated        06 Aug 2017
 
 // @grant          GM_xmlhttpRequest
 // @grant          unsafeWindow
@@ -58,6 +50,12 @@
 /*
 
 ## Updates
+
+#### 7.2.1
+
+* New: Extension info
+* Updates JSHint options
+* Removes outdated @include links
 
 #### 7.2
 
@@ -95,8 +93,8 @@
 * Patched back Gfycat iFrame setting for Safari (it is incompatible with new settings)
 * Updates YouTube data API
 * Removes:
-    * Object tag for YouTube for Flash (Deprecated)
-    * "Batch" loading of descriptions (Only manual and scroll methods are supported)
+	* Object tag for YouTube for Flash (Deprecated)
+	* "Batch" loading of descriptions (Only manual and scroll methods are supported)
 
 // #Updates
 
@@ -258,7 +256,7 @@ Whitelist these on Ghostery
 	// U P D A T E HANDLE
 	update = {
 		name: 'ytma!',
-		version: 7200,
+		version: 7210,
 		key: 'ujs_YTMA_UPDT_HR',
 		callback: 'ytmaupdater',
 		page: 'https://greasyfork.org/scripts/1023-youtube-me-again',
@@ -291,8 +289,8 @@ Whitelist these on Ghostery
 			x.send();
 		},
 		check: function (opt) {
-            if (!strg.on) { return; }
-            if (window.chrome && window.chrome.extension) { return; }
+			if (!strg.on) { return; }
+			if (window.chrome && window.chrome.extension) { return; }
 			var stored = strg.read(this.key), page;
 
 			if (opt || !stored || stored.date < this.day) {
@@ -306,7 +304,7 @@ Whitelist these on Ghostery
 		csstxt: function () {
 			if (!this.pop) { this.pop = true; $$.css('#userscriptupdater2,#userscriptupdater2:visited{box-shadow:1px 1px 6px #7776;border-bottom:3px solid #d65e55;cursor:pointer;color:#555;font-family:sans-serif;font-size:12px;font-weight:700;text-align:justify;position:fixed;z-index:999999;right:10px;top:10px;background:#ebebeb url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTguODQ4NTMgMTk5LjM4MzA3Ij48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNC4yNzYgLTE2LjM2NykiPjxjaXJjbGUgY3g9IjEwNC4zMjEiIGN5PSIxMTYuMzI3IiByPSI5OC4yNzQiIGZpbGw9IiNkNjVlNTUiLz48cGF0aCBmaWxsPSIjZTljZTAyIiBzdHJva2U9IiNlOWM4MDIiIHN0cm9rZS13aWR0aD0iMTYuNyIgZD0iTTE2Ni40NSAxNTcuMzEySDQxLjg5bDMxLjE0LTUzLjkzNSAzMS4xNC01My45MzUgMzEuMTM3IDUzLjkzNXoiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48dGV4dCB4PSI4NS42NDMiIHk9IjE1MS44NjYiIGZpbGw9IiNkNjVlNTUiIHN0cm9rZS13aWR0aD0iMS40NzciIHN0eWxlPSJsaW5lLWhlaWdodDoxLjI1Oy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0Jvb2sgQW50aXF1YSciIGZvbnQtd2VpZ2h0PSI0MDAiIGZvbnQtc2l6ZT0iNTkuMDg4IiBmb250LWZhbWlseT0iQm9vayBBbnRpcXVhIiBsZXR0ZXItc3BhY2luZz0iMCIgd29yZC1zcGFjaW5nPSIwIj48dHNwYW4geD0iODUuNjQzIiB5PSIxNTEuODY2IiBzdHlsZT0iLWlua3NjYXBlLWZvbnQtc3BlY2lmaWNhdGlvbjonQm9vayBBbnRpcXVhJyIgZm9udC13ZWlnaHQ9IjcwMCIgZm9udC1zaXplPSIxMjYuMDU0Ij4hPC90c3Bhbj48L3RleHQ+PC9nPjwvc3ZnPg==) no-repeat 10px center;background-size:40px;padding:0 20px 0 60px;height:55px;line-height:55px}#userscriptupdater2:hover,#userscriptupdater2:visited:hover{color:#b33a3a !important;border-color:#ce4b30}'); }
 		}
-    };
+	};
 	update.check();
 
 	/** Y T M A CLASS
@@ -723,7 +721,7 @@ Whitelist these on Ghostery
 			save: function (e) {
 				var o = {};
 
-				if (e && /(?:INPUT|LABEL)/i.test(e.target.nodeName)) {
+				if (e && (/(?:INPUT|LABEL)/i).test(e.target.nodeName)) {
 					// console.log(YTMA.user.$form.querySelectorAll('[data-key]'));
 					// [data-key]:checked
 					$$.ary(YTMA.user.$form.querySelectorAll('[data-key]')).forEach(function (e) {
@@ -767,7 +765,7 @@ Whitelist these on Ghostery
 				}
 			},
 			formToggle: function (e) {
-				if (!e || (e && e.target && !/(?:INPUT|LABEL)/i.test(e.target.nodeName))) {
+				if (!e || (e && e.target && !(/(?:INPUT|LABEL)/i).test(e.target.nodeName))) {
 					YTMA.user.$form.classList.toggle('ytm_none');
 				}
 			},
