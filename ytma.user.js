@@ -7,7 +7,7 @@
 // @name           YouTube Me Again!
 // @namespace      hateradio)))
 // @author         hateradio
-// @version        7.2.1
+// @version        7.2.2
 // @description    ytma! automatically converts YouTube(TM), Vimeo, Vine, Soundcloud, WebM, and MP4 links into real embedded videos.
 // @homepage       https://greasyfork.org/en/scripts/1023-youtube-me-again
 // @updateURL      https://greasyfork.org/scripts/1023-youtube-me-again/code/YouTube%20Me%20Again!.meta.js
@@ -50,6 +50,10 @@
 /*
 
 ## Updates
+
+#### 7.2.2
+
+* Updates YouTube iFrame to hide related video feature when pausing
 
 #### 7.2.1
 
@@ -256,7 +260,7 @@ Whitelist these on Ghostery
 	// U P D A T E HANDLE
 	update = {
 		name: 'ytma!',
-		version: 7210,
+		version: 7220,
 		key: 'ujs_YTMA_UPDT_HR',
 		callback: 'ytmaupdater',
 		page: 'https://greasyfork.org/scripts/1023-youtube-me-again',
@@ -1461,7 +1465,7 @@ Whitelist these on Ghostery
 				];
 			},
 			youtube: function (data, attrs) {
-				var params = '?html5=1&version=3&modestbranding=1&theme=dark&color=white&showinfo=1&vq=' + attrs.quality
+				var params = '?html5=1&version=3&modestbranding=1&rel=0&showinfo=1&vq=' + attrs.quality
 					+ '&iv_load_policy=' + YTMA.user.preferences.yt_annotation
 					+ '&start=' + attrs.start
 					+ '&volume=' + YTMA.user.preferences.yt_volume;
