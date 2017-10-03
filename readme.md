@@ -13,6 +13,10 @@ _aka ytma!_
 
 ## Updates
 
+#### 7.2.3
+
+* Fix: Parses hours from YouTube URLs
+
 #### 7.2.2
 
 * Updates YouTube iFrame to hide related video feature when pausing

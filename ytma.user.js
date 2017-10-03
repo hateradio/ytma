@@ -7,7 +7,7 @@
 // @name           YouTube Me Again!
 // @namespace      hateradio)))
 // @author         hateradio
-// @version        7.2.2
+// @version        7.2.3
 // @description    ytma! automatically converts YouTube(TM), Vimeo, Vine, Soundcloud, WebM, and MP4 links into real embedded videos.
 // @homepage       https://greasyfork.org/en/scripts/1023-youtube-me-again
 // @updateURL      https://greasyfork.org/scripts/1023-youtube-me-again/code/YouTube%20Me%20Again!.meta.js
@@ -39,7 +39,7 @@
 // @match          *://*.neogaf.com/forum/editpost.php*
 // @match          *://*.neogaf.com/forum/private.php*
 
-// @updated        06 Aug 2017
+// @updated        02 Oct 2018
 
 // @grant          GM_xmlhttpRequest
 // @grant          unsafeWindow
@@ -50,6 +50,10 @@
 /*
 
 ## Updates
+
+#### 7.2.3
+
+* Fix: Parses hours from YouTube URLs
 
 #### 7.2.2
 
@@ -260,7 +264,7 @@ Whitelist these on Ghostery
 	// U P D A T E HANDLE
 	update = {
 		name: 'ytma!',
-		version: 7220,
+		version: 7230,
 		key: 'ujs_YTMA_UPDT_HR',
 		callback: 'ytmaupdater',
 		page: 'https://greasyfork.org/scripts/1023-youtube-me-again',
@@ -278,7 +282,7 @@ Whitelist these on Ghostery
 			this.csstxt();
 
 			var a = document.createElement('a'), b = strg.read(this.key);
-			a.href = b.page || '#';
+			a.href = b.page || this.page;
 			a.id = 'userscriptupdater2';
 			a.title = 'Update now.';
 			a.target = '_blank';
@@ -298,7 +302,7 @@ Whitelist these on Ghostery
 			var stored = strg.read(this.key), page;
 
 			if (opt || !stored || stored.date < this.day) {
-				page = (stored && stored.page) || '#';
+				page = (stored && stored.page) || this.page;
 				strg.save(this.key, {date: this.time(), version: this.version, page: page});
 				this.xhr();
 			} else if (this.version < stored.version) {
@@ -538,7 +542,7 @@ Whitelist these on Ghostery
 
 	YTMA.reg = {
 		siteExpressions: null,
-		time: /(?:t\=(?:(\d+)m)?(\d+))/,
+		time: /(?:t\=(?:(\d+)h)?(?:(\d+)m)?(\d+))/,
 		ios: /(?:\b(?:ipod|iphone|ipad))\b/i,
 		extra: {
 			soundcloud: {
@@ -1884,7 +1888,7 @@ Whitelist these on Ghostery
 		time: function () {
 			try {
 				var m = this.parent.data.uri.match(YTMA.reg.time).slice(1, 3);
-				return ((+m[0] || 0) * 60) + (+m[1] || 0);
+				return ((+m[0] || 0) * 60 * 60) + ((+m[1] || 0) * 60) + (+m[2] || 0);
 			} catch (e) { return 0; }
 		},
 		findType: function () {
