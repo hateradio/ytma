@@ -13,8 +13,9 @@ _aka ytma!_
 
 ## Updates
 
-#### 7.2.3
+#### 7.5
 
+* NEW: Support for resetera
 * Fix: Parses hours from YouTube URLs
 
 #### 7.2.2

@@ -7,7 +7,7 @@
 // @name           YouTube Me Again!
 // @namespace      hateradio)))
 // @author         hateradio
-// @version        7.2.3
+// @version        7.5
 // @description    ytma! automatically converts YouTube(TM), Vimeo, Vine, Soundcloud, WebM, and MP4 links into real embedded videos.
 // @homepage       https://greasyfork.org/en/scripts/1023-youtube-me-again
 // @updateURL      https://greasyfork.org/scripts/1023-youtube-me-again/code/YouTube%20Me%20Again!.meta.js
@@ -32,14 +32,16 @@
 // @include        http*://*.neogaf.com/forum/newreply.php*
 // @include        http*://*.neogaf.com/forum/editpost.php*
 // @include        http*://*.neogaf.com/forum/private.php*
+// @include        http*://*.resetera.com/threads/*
 
 // @match          *://*.neogaf.com/forum/showthread.php*
 // @match          *://*.neogaf.com/forum/showpost.php?p*
 // @match          *://*.neogaf.com/forum/newreply.php*
 // @match          *://*.neogaf.com/forum/editpost.php*
 // @match          *://*.neogaf.com/forum/private.php*
+// @match          *://*.resetera.com/threads/*
 
-// @updated        02 Oct 2018
+// @updated        28 Oct 2018
 
 // @grant          GM_xmlhttpRequest
 // @grant          unsafeWindow
@@ -51,8 +53,9 @@
 
 ## Updates
 
-#### 7.2.3
+#### 7.5
 
+* NEW: Support for resetera
 * Fix: Parses hours from YouTube URLs
 
 #### 7.2.2
@@ -211,7 +214,7 @@ Whitelist these on Ghostery
 		js: function (t) {
 			var j = document.createElement('script');
 			j.type = 'text/javascript';
-			j[/^https?\:\/\//i.test(t) ? 'src' : 'textContent'] = t;
+			j[/^https?:\/\//i.test(t) ? 'src' : 'textContent'] = t;
 			this.top.appendChild(j);
 		}
 	};
@@ -264,7 +267,7 @@ Whitelist these on Ghostery
 	// U P D A T E HANDLE
 	update = {
 		name: 'ytma!',
-		version: 7230,
+		version: 7500,
 		key: 'ujs_YTMA_UPDT_HR',
 		callback: 'ytmaupdater',
 		page: 'https://greasyfork.org/scripts/1023-youtube-me-again',
@@ -542,7 +545,7 @@ Whitelist these on Ghostery
 
 	YTMA.reg = {
 		siteExpressions: null,
-		time: /(?:t\=(?:(\d+)h)?(?:(\d+)m)?(\d+))/,
+		time: /(?:t=(?:(\d+)h)?(?:(\d+)m)?(\d+))/,
 		ios: /(?:\b(?:ipod|iphone|ipad))\b/i,
 		extra: {
 			soundcloud: {
@@ -577,7 +580,7 @@ Whitelist these on Ghostery
 	};
 
 	YTMA.selector = { // to build the selector
-		parentBlacklist: ['.smallfont', '.colhead_dark', '.spoiler', 'pre'],
+		parentBlacklist: ['.smallfont', '.colhead_dark', '.spoiler', 'pre', '.messageUserInfo'],
 		chrome37Blacklist: 'a[href*="pomf.se/"]',
 		ignore: function () {
 			var i, j, ignore = [], all = YTMA.DB.views.getAllSiteSelectors().split(','), blacklist = this.parentBlacklist;
@@ -830,7 +833,7 @@ Whitelist these on Ghostery
 					// todo ascertain embedded player properties
 					// f = div.querySelector('iframe, object');
 					// if (f && !YTMA.Scroll.visibleAll(div, 200)) {
-						// y.hidePlayer();
+					// 	y.hidePlayer();
 					// }
 				});
 			},
@@ -1214,8 +1217,8 @@ Whitelist these on Ghostery
 
 			// todo? empty titles and descriptions should be okay
 			// if (data.id && !data.title && !data.desc) {
-				// this.unset(data.id);
-				// return YTMA.ajax.failure.call(data);
+			// 	this.unset(data.id);
+			// 	return YTMA.ajax.failure.call(data);
 			// }
 
 			return true;
@@ -1322,7 +1325,7 @@ Whitelist these on Ghostery
 				favicon: 'https://www.youtube.com/favicon.ico',
 				key: 'id',
 				reg: '(youtu)',
-				matcher: /(?:(?:(?:v\=|#p\/u\/\d*?\/)|(?:v\=|#p\/c\/[a-zA-Z0-9]+\/\d*?\/)|(?:embed\/)|(?:v\/)|(?:\.be\/))([A-Za-z0-9-_]{11}))/i,
+				matcher: /(?:(?:(?:v=|#p\/u\/\d*?\/)|(?:v=|#p\/c\/[a-zA-Z0-9]+\/\d*?\/)|(?:embed\/)|(?:v\/)|(?:\.be\/))([A-Za-z0-9-_]{11}))/i,
 				https: true
 			},
 			vimeo: {
@@ -1517,13 +1520,13 @@ Whitelist these on Ghostery
 			1081 : 'highres'
 		}
 		// videoTypes: (function () {
-			// var v = document.createElement('video');
+		// 	var v = document.createElement('video');
 
-			// return {
-				// ogg: !!v.canPlayType('video/ogg; codecs="theora, vorbis"'),
-				// webm: !!v.canPlayType('video/webm'),
-				// mp4: !!v.canPlayType('video/mp4')
-			// };
+		// 	return {
+		// 		ogg: !!v.canPlayType('video/ogg; codecs="theora, vorbis"'),
+		// 		webm: !!v.canPlayType('video/webm'),
+		// 		mp4: !!v.canPlayType('video/mp4')
+		// 	};
 		// }()),
 	};
 
@@ -1672,7 +1675,7 @@ Whitelist these on Ghostery
 				this.buildList('ytm_options', [
 					strg.on ? {type: 'settings', text: '!', title: 'YTMA Settings'} : null,
 					{type: 'close', text: '\u00D7', title: 'Close the video.'}])
-				);
+			);
 
 			this.control.appendChild(f);
 			this.control.addEventListener('click', YTMA.UI.events.videoBar.bind(this), false);
@@ -1843,13 +1846,13 @@ Whitelist these on Ghostery
 		},
 		video: function (player) {
 			var video = $$.e('video', {
-				controls: true,
-				autoplay: false,
-				loop: true,
-				className: this.$css('video'),
-				$allowscriptaccess: true,
-				preload: 'metadata'
-			}), links = [];
+					controls: true,
+					autoplay: false,
+					loop: true,
+					className: this.$css('video'),
+					$allowscriptaccess: true,
+					preload: 'metadata'
+				}), links = [];
 
 			player.attrs.sources.forEach(function (source) {
 				$$.e('source', {src: source.src, $type: source.type}, video);

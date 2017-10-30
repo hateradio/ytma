@@ -13,7 +13,8 @@
         "*://*.neogaf.com/forum/showpost.php?p*",
         "*://*.neogaf.com/forum/newreply.php*",
         "*://*.neogaf.com/forum/editpost.php*",
-        "*://*.neogaf.com/forum/private.php*"
+        "*://*.neogaf.com/forum/private.php*",
+        "*://*.resetera.com/threads/*"
       ]
     }
   ],
@@ -36,5 +37,5 @@
     "https://*.youtube-nocookie.com/embed/*"
   ],
   "short_name": "ytma",
-  "version": "7.2.3"
+  "version": "7.5"
 }
