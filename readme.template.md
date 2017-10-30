@@ -1,7 +1,7 @@
 # YouTube Me Again!
 _aka ytma!_
 
-![YouTube Me Again!](https://www.dropbox.com/s/droq2q0wv2hm78u/256.png?dl=1 "ytma!")
+![YouTube Me Again!](https://hateradio.github.io/ytma/256.png "ytma!")
 
 ## Information
 
