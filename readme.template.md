@@ -3,6 +3,12 @@ _aka ytma!_
 
 ![YouTube Me Again!](https://hateradio.github.io/ytma/256.png "ytma!")
 
+### Install and Source
+
+Install it from Greasy Fork . . . [https://greasyfork.org/en/scripts/1023-youtube-me-again/](https://greasyfork.org/en/scripts/1023-youtube-me-again/ "YouTube Me Again!")
+
+Check out the source . . . [https://github.com/hateradio/ytma](https://github.com/hateradio/ytma "YouTube Me Again! Source Code")
+
 ## Information
 
 * Chrome users can install it from the [Chrome Web Store](https://chrome.google.com/webstore/detail/youtube-me-again/ijioppmkelhobdlpbcgojamecmailcnh)
