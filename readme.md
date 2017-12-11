@@ -13,6 +13,10 @@ _aka ytma!_
 
 ## Updates
 
+#### 7.6
+
+* Fix: overrides resetera support of embeded videos
+
 #### 7.5
 
 * NEW: Support for resetera

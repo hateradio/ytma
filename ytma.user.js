@@ -7,7 +7,7 @@
 // @name           YouTube Me Again!
 // @namespace      hateradio)))
 // @author         hateradio
-// @version        7.5
+// @version        7.6
 // @description    ytma! automatically converts YouTube(TM), Vimeo, Vine, Soundcloud, WebM, and MP4 links into real embedded videos.
 // @homepage       https://greasyfork.org/en/scripts/1023-youtube-me-again
 // @updateURL      https://greasyfork.org/scripts/1023-youtube-me-again/code/YouTube%20Me%20Again!.meta.js
@@ -41,7 +41,7 @@
 // @match          *://*.neogaf.com/forum/private.php*
 // @match          *://*.resetera.com/threads/*
 
-// @updated        28 Oct 2018
+// @updated        10 Dec 2017
 
 // @grant          GM_xmlhttpRequest
 // @grant          unsafeWindow
@@ -52,6 +52,10 @@
 /*
 
 ## Updates
+
+#### 7.6
+
+* Fix: overrides resetera support of embeded videos
 
 #### 7.5
 
@@ -267,7 +271,7 @@ Whitelist these on Ghostery
 	// U P D A T E HANDLE
 	update = {
 		name: 'ytma!',
-		version: 7500,
+		version: 7600,
 		key: 'ujs_YTMA_UPDT_HR',
 		callback: 'ytmaupdater',
 		page: 'https://greasyfork.org/scripts/1023-youtube-me-again',
@@ -373,7 +377,7 @@ Whitelist these on Ghostery
 	};
 
 	YTMA.grabIdAndSite = function (link, cb) {
-		var uri = link.href, id, site, match;
+		var uri = link.href || link.src, id, site, match;
 		try {
 			site = YTMA.reg.siteByTest[YTMA.reg.siteExpressions.test(uri) ? RegExp.lastMatch : ''];
 			// console.log(site);
@@ -445,6 +449,7 @@ Whitelist these on Ghostery
 				}
 			},
 			go: function (host) {
+				// console.log(host);
 				if (/(?:googlevideo|youtube-nocookie\.com|youtube\.com\.?)/i.test(host)) {
 					this.sites.youtube();
 				} else if (this.sites[host]) {
@@ -464,6 +469,11 @@ Whitelist these on Ghostery
 					if (YTMA.selector.processor() > 0) {
 						YTMA.user.fn.loadPreferences();
 					}
+				},
+				'resetera.com': function () {
+					$$.css('.bbCodeQuote .quoteContainer .quote { max-height: initial } .bbCodeQuote .quoteContainer .quoteExpand.quoteCut { display: none }');
+					$$.css('.bbCodeQuote .ytm_block iframe, .bbCodeQuote .ytm_block [data-s9e-mediaembed], .bbCodeQuote .ytm_block .fb_iframe_widget, .bbCodeQuote .ytm_block object, .bbCodeQuote .ytm_block embed { max-height: initial; max-width: initial }')
+					this.$generic();
 				},
 				'gfycat.com': function () {
 					var v = document.querySelector('video');
@@ -592,6 +602,22 @@ Whitelist these on Ghostery
 			//console.log(ignore);
 			return ignore.join(',');
 		},
+		iframes: function () { // for resetera
+			$$.x('.messageContent iframe').forEach(function (f) {
+				if (YTMA.DB.sites.youtube.matcher.test(f.src)) {
+					var src = f.src.replace('https://www.youtube.com/embed/', 'https://youtu.be/').split('?')[0];
+					var anchor = $$.e('a', {href: src, textContent: src});
+
+					try {
+						f.parentElement.parentElement.parentElement.insertBefore(anchor, f.parentElement.parentElement);
+						f.parentElement.parentElement.parentElement.removeChild(f.parentElement.parentElement);
+					} catch (e) {
+						f.parentElement.insertBefore(anchor, f.parentElement);
+						f.parentElement.removeChild(f.parentElement);
+					}
+				}
+			});
+		},
 		links: function () {
 			var links;
 
@@ -606,6 +632,7 @@ Whitelist these on Ghostery
 			return links;
 		},
 		processor: function () {
+			this.iframes();
 			var links = this.links();
 
 			if (links.length > 0) {
@@ -924,7 +951,7 @@ Whitelist these on Ghostery
 		// todo
 		// if (window.NO_YTMA_CSS) { return; }
 
-		$$.css('.ytm_none,.ytm_link br{display:none!important}.ytm_box{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box}.ytm_block{display:block;position:relative;clear:both;text-align:left;border:0;margin:0;padding:0;overflow:hidden}.ytm_normalize{font-weight:400!important;font-style:normal!important;line-height:1.2!important}.ytm_sans{font-family:Arial,Helvetica,sans-serif!important}.ytm_spacer{overflow:auto;margin:0 0 6px;padding:4px}.ytm_spacer.ytm_site_slim{display:inline}.ytm_clear:after{content:"";display:table;clear:both}.ytm_center{text-align:center}.ytm_link b,.ytm_link strong{font-weight:400!important}.ytm_link u{text-decoration:none!important}.ytm_link i,.ytm_link em{font-style:normal!important}.ytm_trigger{width:118px;height:66px;background-color:#262626!important;cursor:pointer;background-position:-1px -12px;float:left;box-shadow:2px 2px rgba(0,0,0,.3);background-size:auto 90px!important;color:#fff;text-shadow:#333 0 0 2px;font-size:13px}.ytm_trigger:hover{box-shadow:2px 2px #9eae9e;opacity:.95}.ytm_trigger var{z-index:2;height:100%;width:100%;position:absolute;left:0;top:0;text-align:right}.ytm_label{display:block;padding:3px 6px;line-height:1.2;font-style:normal}.ytm_init{height:22px;background:rgba(11,11,11,.62);padding:4px 25px 6px 6px}.ytm_site_vine .ytm_trigger{background-color:#90ee90!important;background-size:120px auto!important}.ytm_site_slim .ytm_trigger{background:#e34c26!important;height:auto;box-shadow:0 0 2px #ffdb9d inset,2px 2px rgba(0,0,0,.3);margin:0 3px 0 0;width:auto;transition:all .3s ease-in-out 0s}.ytm_site_slim .ytm_trigger:hover{opacity:.8}.ytm_site_slim .ytm_label{text-shadow:0 0 1px #f06529}.ytm_site_slim .ytm_init{background:transparent}.ytm_bd{float:left;max-width:500px;margin:2px 10px;font-size:90%}.ytm_title{font-weight:700}.ytm_error{color:#cc2f24;font-style:italic}.ytm_loading{font-style:italic;padding:1px 1.5em}.ytm_descr{word-wrap:break-word;max-height:48px;overflow:auto;padding-right:20px}.ytm_descr[data-full]{cursor:pointer}.ytm_descr_open{resize:both;white-space:pre-line}.ytm_descr_open[style]{max-height:none}.ytm_projector{margin-bottom:4px}ul.ytm_control{overflow:hidden;margin:0!important;padding:3px 0 1px;list-style-position:outside!important}.ytm_control li{display:inline;margin:0!important;padding:0!important}.ytm_control li>ul{display:inline-block;margin:0;padding:0 1px 0 0}.ytm_control li ul li{-webkit-user-select:none;-moz-user-select:none;-o-user-select:none;user-select:none;list-style-type:none;cursor:pointer;float:left;color:#858585;border:1px solid #1d1d1d;border-bottom:1px solid #000;border-top:1px solid #292929;box-shadow:0 0 1px #555;height:14px;font-size:12px!important;line-height:12px!important;background:#222;background:linear-gradient(#2d2c2c,#222);margin:0!important;padding:5px 9px 3px!important}.ytm_control li ul li:first-child{border-radius:2px 0 0 2px}.ytm_control li ul li:last-child{border-left:0!important;border-radius:0 2px 2px 0;margin:0 2px 0 0!important}.ytm_control li ul li:first-child:last-child,.ytm_li_setting{border-radius:2px}.ytm_control li ul li:hover{color:#ccc;text-shadow:1px 1px 0 #333;background:#181818}.ytm_control li ul li[id]{color:#ddd;text-shadow:0 0 2px #444}.ytm_panel_size{background:#000;max-width:100%;}.ytm_panel_switcher[data-standby="true"]{background:#111}.ytm_panel_switcher[data-standby="true"]:after{cursor:cell;color:#0e0e0e;content:"ytma!";display:block;font-size:85px;font-style:italic;font-weight:700;left:50%;position:absolute;text-shadow:2px 1px #181818,-1px -1px #0a0a0a;top:50%;transform:translate(-50%,-50%)}.ytm_site_soundcloud .ytm_panel_size.ytm_soundcloud-playlist{height:334px!important}.ytm_fix_center{background:rgba(51,51,51,.41);height:100%;left:0;position:fixed;top:0;width:100%;z-index:99998}#ytm_settings{z-index:99999;max-width:500px;max-height:85%;overflow:auto;background:#fbfbfb;border:1px solid #bbb;color:#444;box-shadow:0 0 5px rgba(0,0,0,.2),0 0 3px rgba(239,239,239,.1) inset;margin:4% auto;padding:4px 8px 0}#ytm_settings p{margin:5px 0;padding:0}#ytm_settings fieldset{vertical-align:top;border-radius:3px;border:1px solid #ccc;margin:0 0 5px}#ytm_settings fieldset span{display:inline-block;min-width:5em}#ytm_settings input{vertical-align:baseline!important;margin:3px 5px!important}#ytm_settingst{font-size:110%;border-bottom:1px solid #d00;margin:3px 0 9px;padding:0 3px 3px}#ytm_settings label{cursor:pointer}#ytm_settings small{font-size:90%}#ytm_opts button{cursor:pointer;margin:10px 5px 8px 2px;padding:3px;border:1px solid #adadad;border-radius:2px;background:#eee;font-size:90%}#ytm_opts button:hover{background:#ddd}');
+		$$.css('.ytm_none,.ytm_link br{display:none!important}.ytm_box{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box}.ytm_block{display:block;position:relative;clear:both;text-align:left;border:0;margin:0;padding:0;overflow:hidden}.ytm_normalize{font-weight:400!important;font-style:normal!important;line-height:1.2!important}.ytm_sans{font-family:Arial,Helvetica,sans-serif!important}.ytm_spacer{overflow:auto;margin:0 0 6px;padding:4px}.ytm_spacer.ytm_site_slim{display:inline}.ytm_clear:after{content:"";display:table;clear:both}.ytm_center{text-align:center}.ytm_link b,.ytm_link strong{font-weight:400!important}.ytm_link u{text-decoration:none!important}.ytm_link i,.ytm_link em{font-style:normal!important}.ytm_trigger{width:118px;height:66px;background-color:#262626!important;cursor:pointer;background-position:-1px -12px;float:left;box-shadow:2px 2px rgba(0,0,0,.3);background-size:auto 90px!important;color:#fff;text-shadow:#333 0 0 2px;font-size:13px}.ytm_trigger:hover{box-shadow:2px 2px #60656b80;opacity:.95}.ytm_trigger var{z-index:2;height:100%;width:100%;position:absolute;left:0;top:0;text-align:right}.ytm_label{display:block;padding:3px 6px;line-height:1.2;font-style:normal}.ytm_init{height:22px;background:rgba(11,11,11,.62);padding:4px 25px 6px 6px}.ytm_site_vine .ytm_trigger{background-color:#90ee90!important;background-size:120px auto!important}.ytm_site_slim .ytm_trigger{background:#e34c26!important;height:auto;box-shadow:0 0 2px #ffdb9d inset,2px 2px rgba(0,0,0,.3);margin:0 3px 0 0;width:auto;transition:all .3s ease-in-out 0s}.ytm_site_slim .ytm_trigger:hover{opacity:.8}.ytm_site_slim .ytm_label{text-shadow:0 0 1px #f06529}.ytm_site_slim .ytm_init{background:transparent}.ytm_bd{float:left;max-width:500px;margin:2px 10px;font-size:90%}.ytm_title{font-weight:700}.ytm_error{color:#cc2f24;font-style:italic}.ytm_loading{font-style:italic;padding:1px 1.5em}.ytm_descr{word-wrap:break-word;max-height:48px;overflow:auto;padding-right:20px}.ytm_descr[data-full]{cursor:pointer}.ytm_descr_open{resize:both;white-space:pre-line}.ytm_descr_open[style]{max-height:none}.ytm_projector{margin-bottom:4px}ul.ytm_control{overflow:hidden;margin:0!important;padding:3px 0 1px;list-style-position:outside!important}.ytm_control li{display:inline;margin:0!important;padding:0!important}.ytm_control li>ul{display:inline-block;margin:0;padding:0 1px 0 0}.ytm_control li ul li{-webkit-user-select:none;-moz-user-select:none;-o-user-select:none;user-select:none;list-style-type:none;cursor:pointer;float:left;color:#858585;border:1px solid #1d1d1d;border-bottom:1px solid #181818;border-top:1px solid #292929;box-shadow:0 0 1px #555;height:14px;font-size:12px!important;line-height:12px!important;background:#222;background:linear-gradient(#2d2c2c,#222);margin:0!important;padding:5px 9px 3px!important}.ytm_control li ul li:first-child{border-radius:2px 0 0 2px}.ytm_control li ul li:last-child{border-left:0!important;border-radius:0 2px 2px 0;margin:0 2px 0 0!important}.ytm_control li ul li:first-child:last-child,.ytm_li_setting{border-radius:2px}.ytm_control li ul li:hover{color:#ccc;text-shadow:1px 1px 0 #333;background:#181818}.ytm_control li ul li[id]{color:#ddd;text-shadow:0 0 2px #444}.ytm_panel_size{background:#000;max-width:100%;}.ytm_panel_switcher[data-standby="true"]{background:#111}.ytm_panel_switcher[data-standby="true"]:after{cursor:cell;color:#0e0e0e;content:"ytma!";display:block;font-size:85px;font-style:italic;font-weight:700;left:50%;position:absolute;text-shadow:2px 1px #181818,-1px -1px #0a0a0a;top:50%;transform:translate(-50%,-50%)}.ytm_site_soundcloud .ytm_panel_size.ytm_soundcloud-playlist{height:334px!important}.ytm_fix_center{background:rgba(51,51,51,.41);height:100%;left:0;position:fixed;top:0;width:100%;z-index:99998}#ytm_settings{z-index:99999;max-width:500px;max-height:85%;overflow:auto;background:#fbfbfb;border:1px solid #bbb;color:#444;box-shadow:0 0 5px rgba(0,0,0,.2),0 0 3px rgba(239,239,239,.1) inset;margin:4% auto;padding:4px 8px 0}#ytm_settings p{margin:5px 0;padding:0}#ytm_settings fieldset{vertical-align:top;border-radius:3px;border:1px solid #ccc;margin:0 0 5px;padding:3px}#ytm_settings legend{padding:3px}#ytm_settings fieldset span{display:inline-block;min-width:5em}#ytm_settings input{vertical-align:baseline!important;margin:3px 5px!important}#ytm_settingst{font-size:110%;border-bottom:1px solid #d00;margin:3px 0 9px;padding:0 3px 3px}#ytm_settings label{cursor:pointer}#ytm_settings small{font-size:90%}#ytm_opts button{cursor:pointer;margin:10px 5px 8px 2px;padding:3px;border:1px solid #adadad;border-radius:2px;background:#eee;font-size:90%}#ytm_opts button:hover{background:#ddd}');
 		// $$.css('.ytm_site_youtube .ytm_sans { font-family: \'Roboto\'; }');
 	};
 
