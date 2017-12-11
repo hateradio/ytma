@@ -111,7 +111,7 @@ module.exports = function (grunt) {
 
     archive.pipe(output);
 
-    files.forEach(f => archive.append(f, { name: f }));
+    files.forEach(f => archive.file(f, { name: f }));
 
     archive.finalize();
   });
@@ -136,7 +136,7 @@ module.exports = function (grunt) {
     grunt.task.run('update');
     grunt.task.run('package');
     grunt.task.run('manifest');
-    grunt.task.run('extension');
+    // grunt.task.run('extension');
 
     grunt.log.write(`PS: don't forget about @updated`);
   });
