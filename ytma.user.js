@@ -7,7 +7,7 @@
 // @name           YouTube Me Again!
 // @namespace      hateradio)))
 // @author         hateradio
-// @version        7.6
+// @version        7.7
 // @description    ytma! automatically converts YouTube(TM), Vimeo, Vine, Soundcloud, WebM, and MP4 links into real embedded videos.
 // @homepage       https://greasyfork.org/en/scripts/1023-youtube-me-again
 // @updateURL      https://greasyfork.org/scripts/1023-youtube-me-again/code/YouTube%20Me%20Again!.meta.js
@@ -41,10 +41,9 @@
 // @match          *://*.neogaf.com/forum/private.php*
 // @match          *://*.resetera.com/threads/*
 
-// @updated        10 Dec 2017
+// @updated        03 Feb 2017
 
 // @grant          GM_xmlhttpRequest
-// @grant          unsafeWindow
 
 // @run-at         document-end
 // ==/UserScript==
@@ -53,13 +52,19 @@
 
 ## Updates
 
+#### 7.7
+
+* New: YTMA will now try to find new links on AJAX-loaded posts on ResetEra
+* Reverts Gfycat iFrame support; removes video tag for wider support
+* Removes an outdated Chrome blacklist
+
 #### 7.6
 
 * Fix: overrides resetera support of embeded videos
 
 #### 7.5
 
-* NEW: Support for resetera
+* New: Support for ResetEra
 * Fix: Parses hours from YouTube URLs
 
 #### 7.2.2
@@ -271,7 +276,7 @@ Whitelist these on Ghostery
 	// U P D A T E HANDLE
 	update = {
 		name: 'ytma!',
-		version: 7600,
+		version: 7700,
 		key: 'ujs_YTMA_UPDT_HR',
 		callback: 'ytmaupdater',
 		page: 'https://greasyfork.org/scripts/1023-youtube-me-again',
@@ -417,10 +422,6 @@ Whitelist these on Ghostery
 		host: document.location.host.replace('www.', ''),
 		control: {
 			$: {
-				patchSafari: function () {
-					delete YTMA.DB.sites.gfycat.videoTag;
-					delete YTMA.DB.sources.gfycat;
-				},
 				checkStorage: function () {
 					if (strg.full() === true) {
 						console.log('YTMA ERROR: Storage is full!');
@@ -461,14 +462,14 @@ Whitelist these on Ghostery
 			sites: {
 				$generic: function () {
 					YTMA.route.control.$.runOnce();
-
-					if (YTMA.DB.browser.safari) { // safari patch
-						YTMA.route.control.$.patchSafari();
-					}
-
 					if (YTMA.selector.processor() > 0) {
 						YTMA.user.fn.loadPreferences();
 					}
+
+					window.setInterval(function () {
+						console.log('ytma! . . . again!!');
+						YTMA.route.sites.$generic();
+					}, 5000);
 				},
 				'resetera.com': function () {
 					$$.css('.bbCodeQuote .quoteContainer .quote { max-height: initial } .bbCodeQuote .quoteContainer .quoteExpand.quoteCut { display: none }');
@@ -591,7 +592,6 @@ Whitelist these on Ghostery
 
 	YTMA.selector = { // to build the selector
 		parentBlacklist: ['.smallfont', '.colhead_dark', '.spoiler', 'pre', '.messageUserInfo'],
-		chrome37Blacklist: 'a[href*="pomf.se/"]',
 		ignore: function () {
 			var i, j, ignore = [], all = YTMA.DB.views.getAllSiteSelectors().split(','), blacklist = this.parentBlacklist;
 			for (i = 0; i < blacklist.length; i++) {
@@ -636,14 +636,6 @@ Whitelist these on Ghostery
 			var links = this.links();
 
 			if (links.length > 0) {
-				if (window.chrome && (/(?:Chrome\/(\d+))/.exec(window.navigator.appVersion) && RegExp.lastParen < 38)) {
-					$$.s(YTMA.selector.chrome37Blacklist, function (a) {
-						if (/(?:\.webm)/i.test(a.href)) {
-							a.dataset.ytmscroll = false;
-						}
-					});
-				}
-
 				links.forEach(YTMA.create);
 			}
 
@@ -1404,8 +1396,7 @@ Whitelist these on Ghostery
 				reg: '(gfycat)',
 				matcher: /(?:gfycat\.com\/(?:(\b(?:[A-Z][a-z]*){3,}\b)))/i,
 				https: true,
-				scroll: true,
-				videoTag: true
+				scroll: true
 			},
 			streamable: {
 				title: 'streamable!',
@@ -1486,16 +1477,6 @@ Whitelist these on Ghostery
 				return [
 					{type: 'video/webm', src: src + '.webm'},
 					{type: 'video/mp4', src: src + '.mp4'}
-				];
-			},
-			gfycat: function (data) {
-				return [
-					{type: 'video/mp4', src: 'https://zippy.gfycat.com/' + data.id + '.mp4'},
-					{type: 'video/mp4', src: 'https://fat.gfycat.com/' + data.id + '.mp4'},
-					{type: 'video/mp4', src: 'https://giant.gfycat.com/' + data.id + '.mp4'},
-					{type: 'video/webm', src: 'https://zippy.gfycat.com/' + data.id + '.webm'},
-					{type: 'video/webm', src: 'https://fat.gfycat.com/' + data.id + '.webm'},
-					{type: 'video/webm', src: 'https://giant.gfycat.com/' + data.id + '.webm'}
 				];
 			},
 			youtube: function (data, attrs) {

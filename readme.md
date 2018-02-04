@@ -19,13 +19,19 @@ Check out the source . . . [https://github.com/hateradio/ytma](https://github.co
 
 ## Updates
 
+#### 7.7
+
+* New: YTMA will now try to find new links on AJAX-loaded posts on ResetEra
+* Reverts Gfycat iFrame support; removes video tag for wider support
+* Removes an outdated Chrome blacklist
+
 #### 7.6
 
 * Fix: overrides resetera support of embeded videos
 
 #### 7.5
 
-* NEW: Support for resetera
+* New: Support for ResetEra
 * Fix: Parses hours from YouTube URLs
 
 #### 7.2.2
