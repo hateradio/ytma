@@ -19,6 +19,11 @@ Check out the source . . . [https://github.com/hateradio/ytma](https://github.co
 
 ## Updates
 
+#### 7.8
+
+* Fix iFrame selectors
+* Adds a monitoring interface to check for updated pages
+
 #### 7.7
 
 * New: YTMA will now try to find new links on AJAX-loaded posts on ResetEra

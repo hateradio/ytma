@@ -1,4 +1,3 @@
-/*jslint maxerr: 500, browser: true, devel: true, bitwise: true, white: true */
 // ==UserScript==
 // Do not modify and re-release this script!
 // If you would like to add support for other sites, please tell me and I'll put it in the includes.
@@ -7,10 +6,9 @@
 // @name           YouTube Me Again!
 // @namespace      hateradio)))
 // @author         hateradio
-// @version        7.7
+// @version        7.8
 // @description    ytma! automatically converts YouTube(TM), Vimeo, Vine, Soundcloud, WebM, and MP4 links into real embedded videos.
-// @homepage       https://greasyfork.org/en/scripts/1023-youtube-me-again
-// @updateURL      https://greasyfork.org/scripts/1023-youtube-me-again/code/YouTube%20Me%20Again!.meta.js
+// @homepageURL    https://greasyfork.org/en/scripts/1023-youtube-me-again
 // @icon           https://www.dropbox.com/s/b85qmq0bsim407s/ytma32.png?dl=1
 // @icon64         https://www.dropbox.com/s/5zw3al38yf39wxb/ytma64.png?dl=1
 // @screenshot     https://www.dropbox.com/s/syy9916b1prygl9/ytmascreen5.png?dl=1
@@ -27,21 +25,13 @@
 // @include        https://gfycat.com/iframe/*
 // @match          https://gfycat.com/iframe/*
 
-// @include        http*://*.neogaf.com/forum/showthread.php*
-// @include        http*://*.neogaf.com/forum/showpost.php?p*
-// @include        http*://*.neogaf.com/forum/newreply.php*
-// @include        http*://*.neogaf.com/forum/editpost.php*
-// @include        http*://*.neogaf.com/forum/private.php*
+// @include        http*://*.neogaf.com/threads/*
 // @include        http*://*.resetera.com/threads/*
 
-// @match          *://*.neogaf.com/forum/showthread.php*
-// @match          *://*.neogaf.com/forum/showpost.php?p*
-// @match          *://*.neogaf.com/forum/newreply.php*
-// @match          *://*.neogaf.com/forum/editpost.php*
-// @match          *://*.neogaf.com/forum/private.php*
+// @match          *://*.neogaf.com/threads/*
 // @match          *://*.resetera.com/threads/*
 
-// @updated        03 Feb 2017
+// @updated        05 Dec 2018
 
 // @grant          GM_xmlhttpRequest
 
@@ -51,6 +41,11 @@
 /*
 
 ## Updates
+
+#### 7.8
+
+* Fix iFrame selectors
+* Adds a monitoring interface to check for updated pages
 
 #### 7.7
 
@@ -162,14 +157,6 @@ Whitelist these on Ghostery
 		return !isNaN(parseFloat(n)) && isFinite(n);
 	}
 
-	function inject(func) {
-		var script = document.createElement('script');
-		script.type = 'text/javascript';
-		script.textContent = '(' + func + ')();';
-		document.body.appendChild(script);
-		document.body.removeChild(script);
-	}
-
 	function removeSearch(uri, keepHash) { // removes search query from a uri
 		var s = uri.indexOf('?'), h = uri.indexOf('#'), hash = '';
 		if (s > -1) {
@@ -179,6 +166,21 @@ Whitelist these on Ghostery
 			uri = uri.substr(0, s) + hash;
 		}
 		return uri;
+	}
+
+	if (!Element.prototype.matches)
+		Element.prototype.matches = Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector;
+
+	if (!Element.prototype.closest) {
+		Element.prototype.closest = function (s) {
+			var el = this;
+			if (!document.documentElement.contains(el)) return null;
+			do {
+				if (el.matches(s)) return el;
+				el = el.parentElement || el.parentNode;
+			} while (el !== null && el.nodeType === 1);
+			return null;
+		};
 	}
 
 	// D O M Handle
@@ -191,14 +193,14 @@ Whitelist these on Ghostery
 			$$.o(o, function (k, v) {
 				var b = k.charAt(0);
 				switch (b) {
-				case '_':
-					c.dataset[k.substring(1)] = v;
-					break;
-				case '$':
-					c.setAttribute(k.substring(1), v);
-					break;
-				default:
-					c[k] = v;
+					case '_':
+						c.dataset[k.substring(1)] = v;
+						break;
+					case '$':
+						c.setAttribute(k.substring(1), v);
+						break;
+					default:
+						c[k] = v;
 				}
 			});
 
@@ -253,7 +255,7 @@ Whitelist these on Ghostery
 						length += window.localStorage[key].length;
 					}
 				}
-			} catch (e) {}
+			} catch (e) { }
 			return 3 + ((length * 16) / (8 * 1024));
 		},
 		full: function () {
@@ -264,7 +266,7 @@ Whitelist these on Ghostery
 				return false;
 			} catch (e) {
 				if (e.name === 'QuotaExceededError' ||
-						e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+					e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
 					return true;
 				}
 			}
@@ -276,7 +278,7 @@ Whitelist these on Ghostery
 	// U P D A T E HANDLE
 	update = {
 		name: 'ytma!',
-		version: 7700,
+		version: 7800,
 		key: 'ujs_YTMA_UPDT_HR',
 		callback: 'ytmaupdater',
 		page: 'https://greasyfork.org/scripts/1023-youtube-me-again',
@@ -315,7 +317,7 @@ Whitelist these on Ghostery
 
 			if (opt || !stored || stored.date < this.day) {
 				page = (stored && stored.page) || this.page;
-				strg.save(this.key, {date: this.time(), version: this.version, page: page});
+				strg.save(this.key, { date: this.time(), version: this.version, page: page });
 				this.xhr();
 			} else if (this.version < stored.version) {
 				this.link();
@@ -330,7 +332,7 @@ Whitelist these on Ghostery
 	/** Y T M A CLASS
 	 *  Bare YTMA class, filled through _new() or _reactivate()
 	 */
-	function YTMA() {}
+	function YTMA() { }
 
 	YTMA.events = {
 		clicks: function (e) { // YTMA global click dispatcher
@@ -406,7 +408,7 @@ Whitelist these on Ghostery
 
 			console.log(id, site, match);
 			if (id && YTMA.DB.sites[site]) {
-				return cb({id: id, site: site}, null);
+				return cb({ id: id, site: site }, null);
 			}
 			throw TypeError('Invalid ID/Site: ' + id + ' @ ' + site);
 		} catch (e) {
@@ -433,7 +435,7 @@ Whitelist these on Ghostery
 						}
 					}
 				},
-				runOnce: function () {
+				runOnce: function (loop) {
 					if (!document.body.hasAttribute('ytma-enabled')) {
 						document.body.setAttribute('ytma-enabled', true);
 
@@ -445,12 +447,17 @@ Whitelist these on Ghostery
 						YTMA.user.init();
 						YTMA.DB.postInit();
 
+						if (loop) {
+							document.body.dataset.YTMA_LOOP = window.setInterval(loop, 5000);
+							loop();
+						}
+
 						document.body.addEventListener('click', YTMA.events.clicks, false);
 					}
 				}
 			},
 			go: function (host) {
-				// console.log(host);
+				console.log(host);
 				if (/(?:googlevideo|youtube-nocookie\.com|youtube\.com\.?)/i.test(host)) {
 					this.sites.youtube();
 				} else if (this.sites[host]) {
@@ -461,19 +468,20 @@ Whitelist these on Ghostery
 			},
 			sites: {
 				$generic: function () {
-					YTMA.route.control.$.runOnce();
-					if (YTMA.selector.processor() > 0) {
-						YTMA.user.fn.loadPreferences();
+					function loop() {
+						if (YTMA.selector.processor() > 0) {
+							YTMA.user.fn.loadPreferences();
+						}
+
+						console.log('ytma! . . . again!!');
 					}
 
-					window.setInterval(function () {
-						console.log('ytma! . . . again!!');
-						YTMA.route.sites.$generic();
-					}, 5000);
+					YTMA.route.control.$.runOnce(loop);
 				},
 				'resetera.com': function () {
+					$$.css('.ytm_control li ul li { height: 24px !important }');
 					$$.css('.bbCodeQuote .quoteContainer .quote { max-height: initial } .bbCodeQuote .quoteContainer .quoteExpand.quoteCut { display: none }');
-					$$.css('.bbCodeQuote .ytm_block iframe, .bbCodeQuote .ytm_block [data-s9e-mediaembed], .bbCodeQuote .ytm_block .fb_iframe_widget, .bbCodeQuote .ytm_block object, .bbCodeQuote .ytm_block embed { max-height: initial; max-width: initial }')
+					$$.css('.bbCodeQuote .ytm_block iframe, .bbCodeQuote .ytm_block [data-s9e-mediaembed], .bbCodeQuote .ytm_block .fb_iframe_widget, .bbCodeQuote .ytm_block object, .bbCodeQuote .ytm_block embed { max-height: initial; max-width: initial }');
 					this.$generic();
 				},
 				'gfycat.com': function () {
@@ -492,42 +500,6 @@ Whitelist these on Ghostery
 					});
 				},
 				youtube: function () { // lets force some quality parity
-					console.log('now inside youtube  . . .', document.location);
-
-					if (/(?:vq=(\w+))/.test(document.location.search)) {
-						document.body.setAttribute('gm-player-quality', RegExp.lastParen);
-					}
-
-					if (/(?:volume=(\d+))/.test(document.location.search)) {
-						document.body.setAttribute('gm-player-volume', RegExp.lastParen);
-					}
-
-					inject(function () {
-						var max = 10, count = 1, intr = window.setInterval(function () {
-							console.log('inside says: ', count, !!window.yt);
-							if (window.yt && window.player) {
-								window.clearInterval(intr);
-
-								var p = window.yt.player.getPlayerByElement(window.player);
-
-								if (document.body.hasAttribute('gm-player-quality')) {
-									console.log('inside says: setting quality to ', document.body.getAttribute('gm-player-quality'));
-									p.setPlaybackQuality(document.body.getAttribute('gm-player-quality'));
-								}
-
-								if (document.body.hasAttribute('gm-player-volume')) {
-									console.log('inside says: setting volume to ', document.body.getAttribute('gm-player-volume'));
-									p.setVolume(document.body.getAttribute('gm-player-volume'));
-								}
-							} else {
-								console.log(count);
-								count += 1;
-								if (count > max) {
-									window.clearInterval(intr);
-								}
-							}
-						}, 500);
-					});
 				}
 			}
 		},
@@ -602,19 +574,13 @@ Whitelist these on Ghostery
 			//console.log(ignore);
 			return ignore.join(',');
 		},
-		iframes: function () { // for resetera
-			$$.x('.messageContent iframe').forEach(function (f) {
-				if (YTMA.DB.sites.youtube.matcher.test(f.src)) {
-					var src = f.src.replace('https://www.youtube.com/embed/', 'https://youtu.be/').split('?')[0];
-					var anchor = $$.e('a', {href: src, textContent: src});
-
-					try {
-						f.parentElement.parentElement.parentElement.insertBefore(anchor, f.parentElement.parentElement);
-						f.parentElement.parentElement.parentElement.removeChild(f.parentElement.parentElement);
-					} catch (e) {
-						f.parentElement.insertBefore(anchor, f.parentElement);
-						f.parentElement.removeChild(f.parentElement);
-					}
+		iframes: function () { // for resetera, convert iframes back to anchors
+			$$.x('.message-body iframe').forEach(function (f) {
+				if (/vi\/(.+?)\/hqdefault/.test(f.style.backgroundImage)) {
+					var src = 'https://youtu.be/' + RegExp.$1,
+						span = f.closest('[data-s9e-mediaembed]');
+					span.insertAdjacentHTML('beforebegin', '<a href=' + src + '>youtube</a>');
+					span.parentElement.removeChild(span);
 				}
 			});
 		},
@@ -690,30 +656,30 @@ Whitelist these on Ghostery
 		},
 		defaults: function () {
 			return {
-				focus         : 0,
-				desc          : 1,
-				ratio         : 2,
-				size          : 360,
-				quality       : 720,
-				autoShow      : 1,
-				yt_nocookie   : 0,
-				yt_annotation : 1,
-				yt_volume     : 100
+				focus: 0,
+				desc: 1,
+				ratio: 2,
+				size: 360,
+				quality: 720,
+				autoShow: 1,
+				yt_nocookie: 0,
+				yt_annotation: 1,
+				yt_volume: 100
 			};
 		},
 		load: function () {
 			var s = strg.grab(YTMA.user.KEY, {});
 
 			YTMA.user.preferences = {
-				size          : YTMA.user.validate('size', s.size),
-				ratio         : YTMA.user.validate('ratio', s.ratio),
-				desc          : YTMA.user.validate('desc', s.desc),
-				focus         : YTMA.user.validate('focus', s.focus),
-				quality       : YTMA.user.validate('quality', s.quality),
-				autoShow      : YTMA.user.validate('autoShow', s.autoShow),
-				yt_nocookie   : YTMA.user.validate('yt_nocookie', s.yt_nocookie),
-				yt_annotation : YTMA.user.validate('yt_annotation', s.yt_annotation),
-				yt_volume     : YTMA.user.validate('yt_volume', s.yt_volume)
+				size: YTMA.user.validate('size', s.size),
+				ratio: YTMA.user.validate('ratio', s.ratio),
+				desc: YTMA.user.validate('desc', s.desc),
+				focus: YTMA.user.validate('focus', s.focus),
+				quality: YTMA.user.validate('quality', s.quality),
+				autoShow: YTMA.user.validate('autoShow', s.autoShow),
+				yt_nocookie: YTMA.user.validate('yt_nocookie', s.yt_nocookie),
+				yt_annotation: YTMA.user.validate('yt_annotation', s.yt_annotation),
+				yt_volume: YTMA.user.validate('yt_volume', s.yt_volume)
 			};
 
 			$$.o(YTMA.user.mapping, function (key, val) {
@@ -889,13 +855,12 @@ Whitelist these on Ghostery
 					'<fieldset><legend>YouTube</legend>',
 					'<p><input name="ytma__yt_annotation" data-key="yt_annotation" type="checkbox" id="ytma__yt_annotation" /><label for="ytma__yt_annotation">Enable video annotations</label></p>',
 					'<p><input name="ytma__yt_nocookie" data-key="yt_nocookie" type="checkbox" id="ytma__yt_nocookie" /><label for="ytma__yt_nocookie">Use https://youtube-nocookie.com to load videos</label></p>',
-					'<p><input name="ytma__yt_volume" data-key="yt_volume" type="number" style="width:4em" min=0 max=100 id="ytma__yt_volume" /><label for="ytma__yt_volume">Video volume (Experimental)</label></p>',
 					'</fieldset>',
 					'<fieldset><legend>Window Focus</legend><p><input name="ytma__focus" data-key="focus" type="checkbox" id="ytma__focus" value="focus" /><label for="ytma__focus">After clicking the thumbnail, set the video at the top of the window.</label></p></fieldset>',
 					'</div><p><small id="ytm_settings_error" class="ytm_error ytm_none ytm_title">Error! Your settings could not be saved.</small></p><p id="ytm_opts"><button type="button" id="ytmaclose">Close</button> <button type="button" id="ytmareset">Reset</button> <button type="button" id="ytmaclear" title="Remove all video descriptions that have been cached">Reset & Remove Cache</button></p></form></div>'
 				].join('');
 
-				YTMA.user.$form = $$.e('div', {className: 'ytm_fix_center ytm_none ytm_box', innerHTML: f}, document.body);
+				YTMA.user.$form = $$.e('div', { className: 'ytm_fix_center ytm_none ytm_box', innerHTML: f }, document.body);
 				YTMA.user.error = document.getElementById('ytm_settings_error');
 
 				e = YTMA.Scroll.debounce(YTMA.user.events.save, 500);
@@ -918,9 +883,9 @@ Whitelist these on Ghostery
 
 		// Roboto font-o
 		// $$.e('link', {
-			// rel: 'stylesheet',
-			// $type: 'text/css',
-			// href: 'https://fonts.googleapis.com/css?family=Roboto'
+		// rel: 'stylesheet',
+		// $type: 'text/css',
+		// href: 'https://fonts.googleapis.com/css?family=Roboto'
 		// }, document.body);
 
 		// console.log(playerCss);
@@ -989,7 +954,7 @@ Whitelist these on Ghostery
 					},
 					onerror: function () {
 						console.log('GM Cannot XHR');
-						YTMA.ajax.failure.call({id: id});
+						YTMA.ajax.failure.call({ id: id });
 					}
 				});
 
@@ -1001,7 +966,7 @@ Whitelist these on Ghostery
 					this.xhr(uri, site, id);
 				} else {
 					console.log('No applicable CORS request available.');
-					this.failure.call({id: id});
+					this.failure.call({ id: id });
 				}
 			}
 		},
@@ -1017,10 +982,10 @@ Whitelist these on Ghostery
 					if (this.status === 200) {
 						YTMA.external.parse(this.responseText, site, id);
 					} else if (this.status === 403) {
-						YTMA.external.populate({site: site, id: id, title: 'Error 403', desc: ''});
-						YTMA.external.save({site: site, id: id, title: 'Error 403', desc: ''});
+						YTMA.external.populate({ site: site, id: id, title: 'Error 403', desc: '' });
+						YTMA.external.save({ site: site, id: id, title: 'Error 403', desc: '' });
 					} else { // if (this.status >= 400 || this.status === 0) {
-						YTMA.ajax.failure.call({id: id});
+						YTMA.ajax.failure.call({ id: id });
 					}
 				}
 			};
@@ -1031,7 +996,7 @@ Whitelist these on Ghostery
 				x.send();
 			} catch (e) {
 				console.error('Cannot send xhr', uri);
-				YTMA.ajax.failure.call({id: id});
+				YTMA.ajax.failure.call({ id: id });
 				console.error(e);
 			}
 		},
@@ -1202,7 +1167,7 @@ Whitelist these on Ghostery
 					console.error('Could not parse this time.');
 				}
 
-				console.log({a: a, b: b, p: p });
+				console.log({ a: a, b: b, p: p });
 				return p;
 			},
 			fromIso8601: function (iso8601) { // eg PT3M, T29S
@@ -1448,12 +1413,12 @@ Whitelist these on Ghostery
 				var key = YTMA.DB.sites[data.site].key;
 
 				return [
-					{type: 'text/html', src: YTMA.DB.sites[data.site].embed.replace('%key', data[key]) }
+					{ type: 'text/html', src: YTMA.DB.sites[data.site].embed.replace('%key', data[key]) }
 				];
 			},
 			'html5-audio': function (data) {
 				return [
-					{type: 'audio/mp3', src: data.uri}
+					{ type: 'audio/mp3', src: data.uri }
 				];
 			},
 			html5: function (data) {
@@ -1461,32 +1426,32 @@ Whitelist these on Ghostery
 
 				if (/(?:webm)/.test(data.uri)) {
 					return [
-						{type: 'video/webm', src: data.uri}
+						{ type: 'video/webm', src: data.uri }
 					];
 				}
 
 				return [
-					{type: 'video/mp4', src: data.uri},
-					{type: 'video/webm', src: data.uri},
-					{type: 'video/ogg; codecs="theora, vorbis"', src: data.uri}
+					{ type: 'video/mp4', src: data.uri },
+					{ type: 'video/webm', src: data.uri },
+					{ type: 'video/ogg; codecs="theora, vorbis"', src: data.uri }
 				];
 			},
 			imgur: function (data) {
 				var src = YTMA.DB.sites.imgur.embed.replace('%key', data.id);
 
 				return [
-					{type: 'video/webm', src: src + '.webm'},
-					{type: 'video/mp4', src: src + '.mp4'}
+					{ type: 'video/webm', src: src + '.webm' },
+					{ type: 'video/mp4', src: src + '.mp4' }
 				];
 			},
 			youtube: function (data, attrs) {
 				var params = '?html5=1&version=3&modestbranding=1&rel=0&showinfo=1&vq=' + attrs.quality
 					+ '&iv_load_policy=' + YTMA.user.preferences.yt_annotation
 					+ '&start=' + attrs.start
-					+ '&volume=' + YTMA.user.preferences.yt_volume;
+					+ '&rel=0';// + YTMA.user.preferences.yt_volume;
 
 				return [
-					{type: 'text/html', src: YTMA.DB.sites.youtube.embed.replace('%key', data.id) + params}
+					{ type: 'text/html', src: YTMA.DB.sites.youtube.embed.replace('%key', data.id) + params }
 				];
 			}
 		},
@@ -1507,11 +1472,11 @@ Whitelist these on Ghostery
 				3: 'pr'
 			},
 			sizes: {
-				0   : 'h',
-				240 : 's',
-				360 : 'm',
-				480 : 'l',
-				720 : 'xl'
+				0: 'h',
+				240: 's',
+				360: 'm',
+				480: 'l',
+				720: 'xl'
 			},
 			aspects: {
 				1: 4 / 3,
@@ -1520,12 +1485,12 @@ Whitelist these on Ghostery
 			}
 		},
 		qualities: {
-			240  : 'small',
-			360  : 'medium',
-			480  : 'large',
-			720  : 'hd720',
-			1080 : 'hd1080',
-			1081 : 'highres'
+			240: 'small',
+			360: 'medium',
+			480: 'large',
+			720: 'hd720',
+			1080: 'hd1080',
+			1081: 'highres'
 		}
 		// videoTypes: (function () {
 		// 	var v = document.createElement('video');
@@ -1549,8 +1514,8 @@ Whitelist these on Ghostery
 		this.selected = { size: null, ratio: null };
 
 		this.trigger = ytma.spn;
-		this.projector = $$.e('div', {className: 'ytm_projector ytm_none ytm_block ytm_normalize ytm_sans'});
-		this.control = $$.e('ul', {className: 'ytm_control ytm_sans'});
+		this.projector = $$.e('div', { className: 'ytm_projector ytm_none ytm_block ytm_normalize ytm_sans' });
+		this.control = $$.e('ul', { className: 'ytm_control ytm_sans' });
 		this.customBar = YTMA.DB.views.getToolbar(this.ytmx.data.site);
 		this.controlBar();
 	};
@@ -1671,18 +1636,18 @@ Whitelist these on Ghostery
 
 			$$.a(f,
 				this.customBar.ratio ? this.buildList('ytm_ratios', [
-					{type: 'ratio', text: '4:3', value: YTMA.UI.ratios.SD, title: 'SD'},
-					{type: 'ratio', text: '16:9', value: YTMA.UI.ratios.HD, title: 'Landscape'},
-					{type: 'ratio', text: '9:16', value: YTMA.UI.ratios.PORTRAIT, title: 'Portrait'}]) : null,
+					{ type: 'ratio', text: '4:3', value: YTMA.UI.ratios.SD, title: 'SD' },
+					{ type: 'ratio', text: '16:9', value: YTMA.UI.ratios.HD, title: 'Landscape' },
+					{ type: 'ratio', text: '9:16', value: YTMA.UI.ratios.PORTRAIT, title: 'Portrait' }]) : null,
 				this.customBar.size ? this.buildList('ytm_sizes', [
-					{type: 'size', text: '\u00D8', value: YTMA.UI.sizes.HIDDEN, title: 'Hide the video.'},
-					{type: 'size', text: 'S', value: YTMA.UI.sizes.S, title: '240p'},
-					{type: 'size', text: 'M', value: YTMA.UI.sizes.M, title: '360p'},
-					{type: 'size', text: 'L', value: YTMA.UI.sizes.L, title: '480p'},
-					{type: 'size', text: 'X', value: YTMA.UI.sizes.X, title: '720p'}]) : null,
+					{ type: 'size', text: '\u00D8', value: YTMA.UI.sizes.HIDDEN, title: 'Hide the video.' },
+					{ type: 'size', text: 'S', value: YTMA.UI.sizes.S, title: '240p' },
+					{ type: 'size', text: 'M', value: YTMA.UI.sizes.M, title: '360p' },
+					{ type: 'size', text: 'L', value: YTMA.UI.sizes.L, title: '480p' },
+					{ type: 'size', text: 'X', value: YTMA.UI.sizes.X, title: '720p' }]) : null,
 				this.buildList('ytm_options', [
-					strg.on ? {type: 'settings', text: '!', title: 'YTMA Settings'} : null,
-					{type: 'close', text: '\u00D7', title: 'Close the video.'}])
+					strg.on ? { type: 'settings', text: '!', title: 'YTMA Settings' } : null,
+					{ type: 'close', text: '\u00D7', title: 'Close the video.' }])
 			);
 
 			this.control.appendChild(f);
@@ -1694,12 +1659,12 @@ Whitelist these on Ghostery
 			el.id = type + this.ytmx.data.uid;
 			try {
 				this.selected[type].removeAttribute('id');
-			} catch (e) {}
+			} catch (e) { }
 			this.selected[type] = el;
 		},
 		buildList: function (className, elements) {
 			var li = $$.e('li'),
-				ul = $$.e('ul', {className: className}, li),
+				ul = $$.e('ul', { className: className }, li),
 				f = document.createDocumentFragment(),
 				i,
 				e;
@@ -1714,7 +1679,7 @@ Whitelist these on Ghostery
 			return li;
 		},
 		li: function (type, txt, value, title) {
-			var l = $$.e('li', {_type: type, textContent: txt, _value: value, title: title});
+			var l = $$.e('li', { _type: type, textContent: txt, _value: value, title: title });
 			if ((type === 'size' && this.play.attrs.size === value) || (type === 'ratio' && this.play.attrs.ratio === value)) {
 				this.markSelected(l, type);
 			}
@@ -1745,9 +1710,9 @@ Whitelist these on Ghostery
 		this.attrs.type = this.findType();
 		this.media = YTMA.Player.makeMedia[this.attrs.type](this);
 
-		this.channel = $$.e('div', {className: 'ytm_panel_channel ytm_block'}, this.media, true);
-		this.switcher = $$.e('div', {className: 'ytm_panel_switcher ytm_panel_size ytm_block ytm_' + this.attrs.type, _ytmuid: this.parent.data.uid, _standby: true});
-		this.panel = $$.e('div', {className: 'ytm_panel ytm_block'}, this.switcher, true);
+		this.channel = $$.e('div', { className: 'ytm_panel_channel ytm_block' }, this.media, true);
+		this.switcher = $$.e('div', { className: 'ytm_panel_switcher ytm_panel_size ytm_block ytm_' + this.attrs.type, _ytmuid: this.parent.data.uid, _standby: true });
+		this.panel = $$.e('div', { className: 'ytm_panel ytm_block' }, this.switcher, true);
 
 		if (parent.data.site === 'soundcloud' && YTMA.reg.extra.soundcloud.playlist.test(parent.anchor.href)) {
 			this.media.classList.add('ytm_soundcloud-playlist');
@@ -1854,27 +1819,28 @@ Whitelist these on Ghostery
 		},
 		video: function (player) {
 			var video = $$.e('video', {
-					controls: true,
-					autoplay: false,
-					loop: true,
-					className: this.$css('video'),
-					$allowscriptaccess: true,
-					preload: 'metadata'
-				}), links = [];
+				controls: true,
+				autoplay: false,
+				loop: true,
+				className: this.$css('video'),
+				$allowscriptaccess: true,
+				preload: 'metadata'
+			}), links = [];
 
 			player.attrs.sources.forEach(function (source) {
-				$$.e('source', {src: source.src, $type: source.type}, video);
+				$$.e('source', { src: source.src, $type: source.type }, video);
 
 				links.push('<a href="' + source.src + '">' + source.src + '</a>');
 			});
 
-			$$.e('p', {innerHTML: 'Could not load source(s): ' + links.join('<br />')}, video);
+			$$.e('p', { innerHTML: 'Could not load source(s): ' + links.join('<br />') }, video);
 
 			return video;
 		},
 		iframe: function (player) {
 			return $$.e('iframe', {
 				$allowfullscreen: true,
+				$referrerpolicy: 'no-referrer',
 				// $sandbox: 'allow-same-origin allow-scripts allow-popups',
 				$type: player.attrs.sources[0].type,
 				src: player.attrs.sources[0].src,
@@ -1969,7 +1935,7 @@ Whitelist these on Ghostery
 
 			try {
 				this.dom.custom[this.data.site].call(this);
-			} catch (e) {}
+			} catch (e) { }
 
 			this.dom.link.call(this);
 			this.dom.span.call(this);
@@ -2005,8 +1971,8 @@ Whitelist these on Ghostery
 				var f = document.createDocumentFragment(),
 					site = YTMA.DB.sites[this.data.site];
 
-				$$.e('span', {className: 'ytm_init ytm_label ytm_sans ytm_box', textContent: this.spn.title}, this.spn);
-				$$.e('var', {className: 'ytm_label ytm_box', _ytmid: this.data.id, _ytmuid: this.data.uid, _ytmsid: this.data.sid, _ytmsite: this.data.site, textContent: '\u25B6'}, this.spn);
+				$$.e('span', { className: 'ytm_init ytm_label ytm_sans ytm_box', textContent: this.spn.title }, this.spn);
+				$$.e('var', { className: 'ytm_label ytm_box', _ytmid: this.data.id, _ytmuid: this.data.uid, _ytmsid: this.data.sid, _ytmsite: this.data.site, textContent: '\u25B6' }, this.spn);
 
 				this.spn.title = 'Watch now!';
 				f.appendChild(this.spn);
@@ -2019,7 +1985,7 @@ Whitelist these on Ghostery
 			},
 			dataLoadLink: function () {
 				var a, s;
-				s = $$.e('span', {className: 'ytm_bd ytm_normalize ytm_manual _' + this.data.sid});
+				s = $$.e('span', { className: 'ytm_bd ytm_normalize ytm_manual _' + this.data.sid });
 				a = $$.e('a', {
 					className: 'ytm_title',
 					textContent: 'Load description.',
@@ -2058,8 +2024,8 @@ Whitelist these on Ghostery
 
 		this.anchor = a;
 
-		this.spn = $$.e('span', {className: 'ytm_trigger ytm_block ytm_normalize ytm_sans', _ytmid: this.data.id, _ytmsite: this.data.site});
-		this.container = $$.e('div', {id: 'w' + this.data.uid, className: 'ytm_spacer ytm_block ytm_site_' + this.data.site});
+		this.spn = $$.e('span', { className: 'ytm_trigger ytm_block ytm_normalize ytm_sans', _ytmid: this.data.id, _ytmsite: this.data.site });
+		this.container = $$.e('div', { id: 'w' + this.data.uid, className: 'ytm_spacer ytm_block ytm_site_' + this.data.site });
 
 		return this;
 	};
@@ -2131,7 +2097,7 @@ Whitelist these on Ghostery
 				height = document.documentElement.clientHeight;
 			offset = isNumber(offset) ? +offset : 0;
 			return ((bound.bottom + offset >= 0)
-						&& (bound.top <= height + offset || bound.bottom <= height - offset));
+				&& (bound.top <= height + offset || bound.bottom <= height - offset));
 		};
 
 		/** Returns 1, 0, -1 when el1 is above, exactly the same, or below el2 */
