@@ -6,7 +6,7 @@
 // @name           YouTube Me Again!
 // @namespace      hateradio)))
 // @author         hateradio
-// @version        7.8
+// @version        7.9
 // @description    ytma! automatically converts YouTube(TM), Vimeo, Vine, Soundcloud, WebM, and MP4 links into real embedded videos.
 // @homepageURL    https://greasyfork.org/en/scripts/1023-youtube-me-again
 // @icon           https://www.dropbox.com/s/b85qmq0bsim407s/ytma32.png?dl=1
@@ -31,7 +31,7 @@
 // @match          *://*.neogaf.com/threads/*
 // @match          *://*.resetera.com/threads/*
 
-// @updated        05 Dec 2018
+// @updated        05 Jan 2019
 
 // @grant          GM_xmlhttpRequest
 
@@ -41,6 +41,10 @@
 /*
 
 ## Updates
+
+#### 7.9
+
+* Fix: Ignore links in XenoForo text areas
 
 #### 7.8
 
@@ -278,7 +282,7 @@ Whitelist these on Ghostery
 	// U P D A T E HANDLE
 	update = {
 		name: 'ytma!',
-		version: 7800,
+		version: 7900,
 		key: 'ujs_YTMA_UPDT_HR',
 		callback: 'ytmaupdater',
 		page: 'https://greasyfork.org/scripts/1023-youtube-me-again',
@@ -563,7 +567,7 @@ Whitelist these on Ghostery
 	};
 
 	YTMA.selector = { // to build the selector
-		parentBlacklist: ['.smallfont', '.colhead_dark', '.spoiler', 'pre', '.messageUserInfo'],
+		parentBlacklist: ['.smallfont', '.colhead_dark', '.spoiler', 'pre', '.messageUserInfo', '.message-editorWrapper'],
 		ignore: function () {
 			var i, j, ignore = [], all = YTMA.DB.views.getAllSiteSelectors().split(','), blacklist = this.parentBlacklist;
 			for (i = 0; i < blacklist.length; i++) {
