@@ -19,6 +19,10 @@ Check out the source . . . [https://github.com/hateradio/ytma](https://github.co
 
 ## Updates
 
+#### 7.9
+
+* Fix: Ignore links in XenoForo text areas
+
 #### 7.8
 
 * Fix iFrame selectors

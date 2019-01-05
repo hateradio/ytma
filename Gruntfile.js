@@ -49,9 +49,7 @@ module.exports = function (grunt) {
   })
 
   grunt.registerTask('update', 'Generate update.json', function () {
-    let update, pretty;
-
-    update = {
+    const update = {
       name: 'YouTube Me Again!',
       version: getVersions().updateVersion,
       page: "https://greasyfork.org/scripts/1023-youtube-me-again"
@@ -63,9 +61,9 @@ module.exports = function (grunt) {
   grunt.registerTask('package', 'Update package.json', function () {
     const pkg = JSON.parse(fs.readFileSync('package.json'));
 
-    const [major, minor = 0, mod = 0, fix = 0] = getVersions().version.split(/[.]/);
+    const [major, minor = 0, mod = 0] = getVersions().version.split(/[.]/);
 
-    pkg.version = `${major}.${minor}.${mod}.${fix}`;
+    pkg.version = `${major}.${minor}.${mod}`;
 
     return writeJson(pkg, 'package.json');
   });
