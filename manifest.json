@@ -33,5 +33,5 @@
     "https://*.youtube-nocookie.com/embed/*"
   ],
   "short_name": "ytma",
-  "version": "7.9"
+  "version": "7.9.1"
 }
