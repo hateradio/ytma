@@ -42,6 +42,10 @@
 
 ## Updates
 
+#### 8
+
+* Update YTMA to ESNext
+
 #### 7.9.1
 
 * Fix: (XenoForo) Ignore links in more text areas
@@ -147,26 +151,19 @@ Whitelist these on Ghostery
 
  */
 
-(function () {
-	'use strict';
 
-	var $$, strg, update;
+(() => {
+	let $$;
+	let strg;
+	let update;
 
-	if (!Function.prototype.bind) {
-		Function.prototype.bind = function (self) {
-			var args = [].slice.call(arguments, 1), fn = this;
-			return function () {
-				return fn.apply(self, args.concat([].slice.call(arguments)));
-			};
-		};
-	}
+	const isNumber = n => !isNaN(parseFloat(n)) && isFinite(n);
 
-	function isNumber(n) {
-		return !isNaN(parseFloat(n)) && isFinite(n);
-	}
-
-	function removeSearch(uri, keepHash) { // removes search query from a uri
-		var s = uri.indexOf('?'), h = uri.indexOf('#'), hash = '';
+	const removeSearch = (uri, keepHash) => {
+		// removes search query from a uri
+		const s = uri.indexOf('?');
+		const h = uri.indexOf('#');
+		let hash = '';
 		if (s > -1) {
 			if (keepHash && h > -1) {
 				hash = uri.substr(h);
@@ -174,14 +171,14 @@ Whitelist these on Ghostery
 			uri = uri.substr(0, s) + hash;
 		}
 		return uri;
-	}
+	};
 
 	if (!Element.prototype.matches)
 		Element.prototype.matches = Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector;
 
 	if (!Element.prototype.closest) {
 		Element.prototype.closest = function (s) {
-			var el = this;
+			let el = this;
 			if (!document.documentElement.contains(el)) return null;
 			do {
 				if (el.matches(s)) return el;
@@ -193,23 +190,36 @@ Whitelist these on Ghostery
 
 	// D O M Handle
 	$$ = {
-		s: function (selector, cb) { var s = document.querySelectorAll(selector), i = -1; while (++i < s.length) { if (cb(s[i], i, s) === false) { break; } } },
-		o: function (object, cb) { var i; for (i in object) { if (object.hasOwnProperty(i)) { if (cb(i, object[i], object) === false) { break; } } } },
-		a: function (e) { var i = 1, j = arguments.length, f = document.createDocumentFragment(); for (i; i < j; i++) { if (arguments[i]) { f.appendChild(arguments[i]); } } e.appendChild(f); return e; },
+		s: (selector, cb) => {
+			const elements = $$.x(selector);
+			elements.some((element, index) => cb(element, index, elements) === false);
+		},
+		o: function (object, cb) {
+			// let i;
+			// for (i in object) {
+			// 	if (object.hasOwnProperty(i)) {
+			// 		if (cb(i, object[i], object) === false) { break; }
+			// 	}
+			// }
+
+			Object.keys(object).some((key, index) => cb(key, index, object) === false);
+		},
+		a: function (parent, ...children) {
+			const fragment = document.createDocumentFragment();
+			children.forEach(el => el ? fragment.appendChild(el) : null);
+			parent.appendChild(fragment);
+			return parent;
+		},
 		e: function (t, o, e, p) {
-			var c = document.createElement(t);
-			$$.o(o, function (k, v) {
-				var b = k.charAt(0);
-				switch (b) {
-					case '_':
-						c.dataset[k.substring(1)] = v;
-						break;
-					case '$':
-						c.setAttribute(k.substring(1), v);
-						break;
-					default:
-						c[k] = v;
-				}
+			const c = document.createElement(t);
+			$$.o(o, (k, v) => {
+				const b = k.charAt(0);
+				if (b === '_')
+					c.dataset[k.substring(1)] = v;
+				else if (b === '$')
+					c.setAttribute(k.substring(1), v);
+				else
+					c[k] = v;
 			});
 
 			if (e && p) {
@@ -219,22 +229,27 @@ Whitelist these on Ghostery
 			}
 			return c;
 		},
-		x: function (selector) { return this.ary(document.querySelectorAll(selector)); },
-		ary: function (ary) { return Array.from ? Array.from(ary) : Array.prototype.slice.call(ary); },
+		x: selector => Array.from(document.querySelectorAll(selector)),
 		top: document.head || document.body,
-		css: function (t) {
+		css: function (text) {
 			if (!this.style) {
 				this.style = document.createElement('style');
 				this.style.type = 'text/css';
-				this.top.appendChild(this.style);
+				document.body.appendChild(this.style);
 			}
-			this.style.appendChild(document.createTextNode(t + '\n'));
+			this.style.appendChild(document.createTextNode(`${text}\n`));
 		},
 		js: function (t) {
-			var j = document.createElement('script');
+			const j = document.createElement('script');
 			j.type = 'text/javascript';
 			j[/^https?:\/\//i.test(t) ? 'src' : 'textContent'] = t;
 			this.top.appendChild(j);
+		},
+		on: (element, type, selector, listener) => {
+			element.addEventListener(type, event => {
+				const found = event.target.closest(selector);
+				if (found) listener.call(found, event);
+			}, false);
 		}
 	};
 
@@ -242,21 +257,27 @@ Whitelist these on Ghostery
 	strg = {
 		MAX: 5012,
 		on: false,
-		test: function () { try { var a, b = localStorage, c = Math.random().toString(16).substr(2, 8); b.setItem(c, c); a = b.getItem(c); return a === c ? !b.removeItem(c) : false; } catch (e) { return false; } },
+		test: function () { try {
+			let a;
+			const b = localStorage;
+			const c = Math.random().toString(16).substr(2, 8);
+			b.setItem(c, c);a = b.getItem(c);return a === c ? !b.removeItem(c) : false;
+		} catch (e) { return false; } },
 		read: function (key) {
 			try {
 				return JSON.parse(localStorage.getItem(key));
 			} catch (e) {
-				console.error(e.lineNumber + ':' + e.message);
+				console.error(`${e.lineNumber}:${e.message}`);
 				return undefined;
 			}
 		},
 		save: function (key, val) { return this.on ? !localStorage.setItem(key, JSON.stringify(val)) : false; },
 		wipe: function (key) { return this.on ? !localStorage.removeItem(key) : false; },
-		zero: function (o) { var k; for (k in o) { if (o.hasOwnProperty(k)) { return false; } } return true; },
-		grab: function (key, def) { var s = strg.read(key); return strg.zero(s) ? def : s; },
+		zero: function (o) { let k; for (k in o) { if (o.hasOwnProperty(k)) { return false; } } return true; },
+		grab: function (key, def) { const s = strg.read(key); return strg.zero(s) ? def : s; },
 		size: function () {
-			var length = 0, key;
+			let length = 0;
+			let key;
 			try {
 				for (key in window.localStorage) {
 					if (window.localStorage.hasOwnProperty(key)) {
@@ -268,7 +289,7 @@ Whitelist these on Ghostery
 		},
 		full: function () {
 			try {
-				var date = +(new Date());
+				const date = +(new Date());
 				localStorage.setItem(date, date);
 				localStorage.removeItem(date);
 				return false;
@@ -294,26 +315,27 @@ Whitelist these on Ghostery
 		interval: 5,
 		day: (new Date()).getTime(),
 		time: function () { return new Date(this.day + (1000 * 60 * 60 * 24 * this.interval)).getTime(); },
-		notification: function (j) {
-			if (this.version < j.version) {
-				strg.save(this.key, { date: this.time(), version: j.version, page: j.page });
+		notification: function({version, page}) {
+			if (this.version < version) {
+				strg.save(this.key, { date: this.time(), version, page });
 				this.link();
 			}
 		},
 		link: function () {
 			this.csstxt();
 
-			var a = document.createElement('a'), b = strg.read(this.key);
+			const a = document.createElement('a');
+			const b = strg.read(this.key);
 			a.href = b.page || this.page;
 			a.id = 'userscriptupdater2';
 			a.title = 'Update now.';
 			a.target = '_blank';
-			a.textContent = 'An update for ' + this.name + ' is available.';
+			a.textContent = `An update for ${this.name} is available.`;
 			a.addEventListener('click', function () { this.style.display = 'none'; }, false);
 			document.body.appendChild(a);
 		},
 		xhr: function () {
-			var x = new XMLHttpRequest();
+			const x = new XMLHttpRequest();
 			x.addEventListener('load', function () { update.notification(JSON.parse(this.responseText)); }, false);
 			x.open('get', update.urij, true);
 			x.send();
@@ -321,11 +343,12 @@ Whitelist these on Ghostery
 		check: function (opt) {
 			if (!strg.on) { return; }
 			if (window.chrome && window.chrome.extension) { return; }
-			var stored = strg.read(this.key), page;
+			const stored = strg.read(this.key);
+			let page;
 
 			if (opt || !stored || stored.date < this.day) {
 				page = (stored && stored.page) || this.page;
-				strg.save(this.key, { date: this.time(), version: this.version, page: page });
+				strg.save(this.key, { date: this.time(), version: this.version, page });
 				this.xhr();
 			} else if (this.version < stored.version) {
 				this.link();
@@ -337,20 +360,482 @@ Whitelist these on Ghostery
 	};
 	update.check();
 
-	/** Y T M A CLASS
-	 *  Bare YTMA class, filled through _new() or _reactivate()
+	class Control {
+		/** U I CLASS
+		 * Class for the player controls
+		 * This is the control bar once the user clicks on the thumbnail
+		 * Contains its own instance of a Player
+		 * @param {YTMA} ytma A YTMA instance
+		 */
+		constructor(ytma) {
+			this.ytmx = ytma;
+
+			this.play = new Player(this.ytmx);
+			this.open = false;
+			this.selected = { size: null, ratio: null };
+
+			this.trigger = ytma.spn;
+			this.projector = $$.e('div', { className: 'ytm_projector ytm_none ytm_block ytm_normalize ytm_sans' });
+			this.options = $$.e('ul', { className: 'ytm_options ytm_sans' });
+			this.controlBarView();
+		}
+
+		resetViewSize() {
+			this.play.dimmensions();
+			this.setControlBarSize(this.play.attrs.size);
+		}
+
+		showOnScroll(el) {
+			if (!this.open && this.ytmx.canShowUnder(el)) {
+				this.showPlayer();
+			}
+		}
+
+		showPlayer() {
+			this.open = true;
+
+			this.trigger.classList.add('ytm_none');
+			this.projector.classList.remove('ytm_none');
+
+			this.attachPlayPanel();
+			this.play.switchOn();
+
+			if (YTMA.user.preferences.focus) {
+				document.location.hash = `#${this.ytmx.container.id}`;
+			}
+		}
+
+		hidePlayer() {
+			this.open = false;
+
+			this.play.switchOff();
+			this.trigger.classList.remove('ytm_none');
+			this.projector.classList.add('ytm_none');
+		}
+
+		attachPlayPanel() {
+			if (!this.play.panel.parentNode) {
+				// console.log('attaching display panel');
+				this.projector.appendChild(this.play.panel);
+			}
+		}
+
+		hideAllPlayers() {
+			const group = YTMA.collect(this.ytmx.data.id);
+			console.log('closing all', this.ytmx.data.id, group.length);
+			group.forEach(y => {
+				y.disableOpenOnScroll();
+				y.getControl().hidePlayer();
+			});
+		}
+
+		setControlBarSize(size) {
+			this.markSelected(this.options.querySelector(`li[data-type="size"][data-value="${size}"]`), 'size');
+		}
+
+		controlBarView() {
+			this.options.innerHTML = Control.template;
+			this.options.addEventListener('click', Control.events.videoBar.bind(this), false);
+			this.projector.appendChild(this.options);
+
+			this.markSelected(this.options.querySelector(`li[data-type="size"][data-value="${this.play.attrs.size}"]`), 'size');
+			this.markSelected(this.options.querySelector(`li[data-type="ratio"][data-value="${this.play.attrs.ratio}"]`), 'ratio');
+			this.ytmx.container.insertBefore(this.projector, this.trigger.nextSibling);
+		}
+
+		markSelected(el, type) {
+			el.id = type + this.ytmx.data.uid;
+			try {
+				this.selected[type].removeAttribute('id');
+			} catch (e) { }
+			this.selected[type] = el;
+		}
+	}
+
+	Control.ratios = {
+		SD: 1,
+		HD: 2,
+		PORTRAIT: 3
+	};
+
+	Control.sizes = {
+		HIDDEN: 0,
+		S: 240,
+		M: 360,
+		L: 480,
+		X: 720
+	};
+
+	Control.template = `
+		<li>
+			<ul class="ytm_ratios">
+				<li data-type="ratio" data-value="1" title="SD">4:3</li>
+				<li data-type="ratio" data-value="2" title="Landscape">16:9</li>
+				<li data-type="ratio" data-value="3" title="Portrait">9:16</li>
+			</ul>
+		</li>
+		<li>
+			<ul class="ytm_sizes">
+				<li data-type="size" data-value="0" title="Hide the video.">\u00D8</li>
+				<li data-type="size" data-value="240" title="240p">S</li>
+				<li data-type="size" data-value="360" title="360p">M</li>
+				<li data-type="size" data-value="480" title="480p">L</li>
+				<li data-type="size" data-value="720" title="720p">X</li>
+			</ul>
+		</li>
+		<li>
+			<ul class="ytm_options">
+				<li data-type="settings" data-value="undefined" title="YTMA Settings">!</li>
+				<li data-type="close" data-value="undefined" title="Close the video.">\u00D7</li>
+			</ul>
+		</li>`;
+
+	/** Trigger is the VAR element */
+	Control.createFromTrigger = t => {
+		console.log('createFromTrigger');
+		if (t.hasAttribute('data-ytmuid') && !YTMA.set[t.dataset.ytmuid]) {
+			console.log('createFromTrigger-new');
+			YTMA.addToSet(new YTMA()._reactivate(t));
+		}
+		console.log('createFromTrigger-ui');
+		return YTMA.set[t.dataset.ytmuid].getControl();
+	};
+
+	Control.events = {
+		$fire: {
+			settings: function () {
+				YTMA.user.events.formToggle();
+			},
+			close: function () {
+				if (YTMA.DB.sites[this.ytmx.data.site].scroll) {
+					console.log('events.close-1');
+					this.hideAllPlayers();
+				} else {
+					console.log('events.close-2');
+					this.ytmx.disableOpenOnScroll();
+					this.hidePlayer();
+				}
+			},
+			ratio: function (li) {
+				const n = parseInt(li.dataset.value, 10);
+				this.play.dimmensions(n);
+				this.markSelected(li, 'ratio');
+			},
+			size: function (li) {
+				const n = parseInt(li.dataset.value, 10);
+				this.play.dimmensions(null, n);
+				this.markSelected(li, 'size');
+			}
+		},
+		videoBar: function({target}) {
+			const el = target;
+			let t;
+
+			if (el.tagName.toLowerCase() === 'li' && el.dataset && el.dataset.type) {
+				t = el.dataset.type;
+				if (Control.events.$fire[t]) {
+					Control.events.$fire[t].call(this, el);
+				}
+			}
+		}
+	};
+
+	/** P L A Y E R CLASS
+	 *  @param parent YTMA instance
 	 */
-	function YTMA() { }
+	class Player {
+
+		constructor(parent) {
+			this.parent = parent;
+
+			this.mode = 'off';
+
+			this.attrs = {
+				sources: null,
+				quality: YTMA.DB.views.getPlayerQuality(YTMA.user.preferences.quality),
+				size: null,
+				ratio: null,
+				start: this.time(),
+				type: null
+			};
+
+			this.attrs.sources = YTMA.DB.views.getPlayerSources(parent.data.site)(parent.data, this.attrs);
+
+			// todo improve type/media
+			this.attrs.type = this.findType();
+			this.media = Player.makeMedia[this.attrs.type](this);
+
+			this.channel = $$.e('div', { className: 'ytm_panel_channel ytm_block' }, this.media, true);
+			this.switcher = $$.e('div', { className: `ytm_panel_switcher ytm_panel_size ytm_block ytm_${this.attrs.type}`, _ytmuid: this.parent.data.uid, _standby: true });
+			this.panel = $$.e('div', { className: 'ytm_panel ytm_block' }, this.switcher, true);
+
+			if (parent.data.site === 'soundcloud' && YTMA.reg.extra.soundcloud.playlist.test(parent.anchor.href)) {
+				this.media.classList.add('ytm_soundcloud-playlist');
+				this.switcher.classList.add('ytm_soundcloud-playlist');
+			}
+
+			this.dimmensions(YTMA.user.preferences.ratio, YTMA.user.preferences.size);
+		}
+
+		dimmensions(ratio, size) {
+			this.attrs.ratio = isNumber(ratio) ? ratio : this.attrs.ratio;
+			this.attrs.size = isNumber(size) ? size : this.attrs.size;
+			this.panel.className = YTMA.DB.views.getPlayerDimmensions(this.attrs.ratio, this.attrs.size);
+		}
+
+		time() {
+			try {
+				const m = this.parent.data.uri.match(YTMA.reg.time).slice(1, 3);
+				return ((+m[0] || 0) * 60 * 60) + ((+m[1] || 0) * 60) + (+m[2] || 0);
+			} catch (e) { return 0; }
+		}
+
+		findType() {
+			if (this.parent.data.site === 'html5-audio') { return 'audio'; }
+			if (YTMA.DB.sites[this.parent.data.site].videoTag) { return 'video'; }
+			return 'iframe';
+		}
+
+		switchOff() {
+			// console.log('removed media');
+
+			if (this.media.pause) {
+				console.log('pausing');
+				this.media.pause();
+			}
+
+			try {
+				this.switcher.removeChild(this.channel);
+			} catch (e) {
+				// console.error(e);
+			}
+			this.mode = 'off';
+		}
+
+		switchOn() {
+			if (this.attrs.size === 0) {
+				this.attrs.size = YTMA.user.preferences.size;
+				this.parent.control.resetViewSize();
+			}
+			// console.log('switch to media');
+			this.switcher.appendChild(this.channel);
+			this.switcher.dataset.standby = false;
+			this.mode = 'on';
+		}
+
+		switchStandby() {
+			// console.log('switch to standby');
+			this.switchOff();
+			this.switcher.dataset.standby = true;
+			this.mode = 'standby';
+		}
+
+		isStandby() {
+			return this.mode === 'standby';
+		}
+	}
+
+	Player.css = {
+		item: function (key, value) {
+			if (isNumber(value)) {
+				value += 'px';
+			}
+
+			return `\t${key}: ${value};\n`;
+		},
+		iter: function (css, cssEntries) {
+			$$.o(cssEntries, (key, value) => {
+				css.push(Player.css.item(key, value));
+			});
+			css.push('}');
+		},
+		generator: function () {
+			const css = [];
+
+			$$.o(this.sizes, (size, sizes) => {
+				$$.o(sizes, (dimm, keys) => {
+					css.push(`\n.ytm_panel-${size}.ytm_panel-${dimm} .ytm_panel_size {\n`);
+					Player.css.iter(css, keys);
+				});
+			});
+
+			// add site overrides
+			$$.o(this.sites, (site, data) => {
+				$$.o(data, (setting, keys) => {
+					if (setting === 'all') {
+						css.push(`\n.ytm_site_${site} .ytm_panel_size {\n`);
+					} else {
+						css.push(`\n.ytm_site_${site} .ytm_panel-${setting} .ytm_panel_size {\n`);
+					}
+					Player.css.iter(css, keys);
+				});
+			});
+
+			return css.join('');
+		},
+		sizes: (() => {
+			const merge = {};
+
+			$$.o(YTMA.DB.playerSize.sizes, (num, size) => {
+				if (num >= 0) {
+					merge[size] = {};
+
+					$$.o(YTMA.DB.playerSize.ratios, (k, ratio) => {
+						if (ratio === 'pr') {
+							const w = Math.floor(num * 0.95); // smaller than the normal sizes
+							merge[size][ratio] = {
+								width: w,
+								height: Math.floor(w * YTMA.DB.playerSize.aspects[k])
+							};
+						} else {
+							merge[size][ratio] = {
+								width: Math.floor(num * YTMA.DB.playerSize.aspects[k]),
+								height: num
+							};
+						}
+					});
+				}
+			});
+
+			return merge;
+		})(),
+		sites: { // custom sizes per site
+			soundcloud: {
+				all: {
+					height: '118px !important'
+				}
+			},
+			vine: {
+				s: {
+					width: 240,
+					height: 240
+				},
+				m: {
+					width: 360,
+					height: 360
+				},
+				l: {
+					width: 480,
+					height: 480
+				},
+				xl: {
+					width: 720,
+					height: 720
+				}
+			}
+		}
+	};
+
+	Player.makeMedia = {
+		$css: function (type) {
+			return `ytm_panel_media ytm_panel_size ytm_block ytm_${type}`;
+		},
+		video: function({attrs}) {
+			const video = $$.e('video', {
+				controls: true,
+				autoplay: false,
+				loop: true,
+				className: this.$css('video'),
+				$allowscriptaccess: true,
+				preload: 'metadata'
+			});
+
+			const links = [];
+
+			attrs.sources.forEach(({src, type}) => {
+				$$.e('source', { src, $type: type }, video);
+
+				links.push(`<a href="${src}">${src}</a>`);
+			});
+
+			$$.e('p', { innerHTML: `Could not load source(s): ${links.join('<br />')}` }, video);
+
+			return video;
+		},
+		iframe: function({attrs}) {
+			return $$.e('iframe', {
+				$allowfullscreen: true,
+				$referrerpolicy: 'no-referrer',
+				// $sandbox: 'allow-same-origin allow-scripts allow-popups',
+				$type: attrs.sources[0].type,
+				src: attrs.sources[0].src,
+				className: this.$css('iframe')
+			});
+		},
+		audio: function({attrs}) {
+			return $$.e('audio', {
+				src: attrs.sources[0].src,
+				$type: attrs.sources[0].type
+			});
+		}
+	};
+
+	/** Y T M A CLASS
+	 *  Bare YTMA class, filled through constructor() or _reactivate()
+	 */
+	class YTMA {
+		/**
+		 * @private
+		 * Creates a new YTMA from the given attributes
+		 * @param {String|Number} id Unique ID
+		 * @param {String} site Website eg: youtube, vimeo
+		 * @param {HTMLAnchorElement} a Anchor element
+		 */
+		constructor(id, site, a) {
+			const uid = YTMA.escapeId(`${id}_${YTMA.num += 1}`);
+
+			this.data = {
+				id,
+				uid: YTMA.escapeId(uid), // unique id
+				sid: YTMA.escapeId(id), // shared id
+				site,
+				uri: a.href
+			};
+
+			this.control = null;
+
+			if (!a.hasAttribute('data-ytmscroll')) { a.dataset.ytmscroll = true; }
+
+			this.anchor = a;
+
+			this.spn = $$.e('span', { className: 'ytm_trigger ytm_block ytm_normalize ytm_sans', _ytmid: this.data.id, _ytmsite: this.data.site });
+			this.container = $$.e('div', { id: `w${this.data.uid}`, className: `ytm_spacer ytm_block ytm_site_${this.data.site}` });
+		}
+
+		/**
+		 * Recreates a YTMA object from a trigger element
+		 * @param {HTMLElement} element the element's dataset and parent for the resurection!
+		 */
+		_reactivate({dataset, parentElement}) {
+			const id = dataset.ytmid;
+			const a = document.querySelector(`a[data-ytmuid="${dataset.ytmuid}"]`);
+
+			this.data = {
+				id,
+				uid: dataset.ytmuid,
+				sid: dataset.ytmsid,
+				site: dataset.ytmsite,
+				uri: a.href
+			};
+
+			this.control = null;
+			this.anchor = a;
+			this.spn = parentElement;
+			this.container = this.spn.parentElement;
+
+			return this;
+		}
+	}
 
 	YTMA.events = {
 		clicks: function (e) { // YTMA global click dispatcher
-			var t = e.target;
+			const t = e.target;
 
 			if (t) {
 				// console.log('YTMA.clicks');
-				if (t.tagName === 'VAR' && t.hasAttribute('data-ytmuid')) { // trigger the ui
+				if (t.tagName === 'VAR' && t.dataset.ytmuid) { // trigger the ui
 					console.log('show', t.dataset.ytmuid);
-					YTMA.UI.createFromTrigger(t).showPlayer();
+					Control.createFromTrigger(t).showPlayer();
 				} else if (t.hasAttribute('data-ytmdescription')) {
 					console.log('load', t.dataset.ytmid);
 					YTMA.external.events.manualLoad(e);
@@ -359,40 +844,39 @@ Whitelist these on Ghostery
 		},
 		thumb: {
 			start: function (e) {
-				var el = e.target;
+				const el = e.target;
 				el.dataset.thumb = el.dataset.thumb > 0 ? (el.dataset.thumb % 3) + 1 : 2;
 				el.style.backgroundImage = ['url(https://i3.ytimg.com/vi/', el.dataset.ytmid, '/', el.dataset.thumb, '.jpg)'].join('');
 				el.dataset.timeout = window.setTimeout(YTMA.events.thumb.start.bind(this, e), 800);
 			},
-			stop: function (e) {
-				window.clearTimeout(e.target.dataset.timeout);
+			stop: function({target}) {
+				window.clearTimeout(target.dataset.timeout);
 			}
 		}
 	};
 
 	YTMA.num = 0;
 
-	YTMA.addToSet = function (ytma) {
-		YTMA.set[ytma.data.uid] = ytma;
-	};
+	YTMA.addToSet = ytma => YTMA.set[ytma.data.uid] = ytma;
 
-	YTMA.create = function (link) {
-		return YTMA.grabIdAndSite(link, function (data, err) {
-			if (err) {
-				console.error(link.href, err);
-				return {};
-			}
+	YTMA.create = link => YTMA.grabIdAndSite(link, ({id, site}, err) => {
+		if (err) {
+			console.error(link.href, err);
+			return {};
+		}
 
-			var y = new YTMA()._new(data.id, data.site, link);
-			YTMA.addToSet(y);
-			y.setup();
+		const y = new YTMA(id, site, link);
+		YTMA.addToSet(y);
+		y.setup();
 
-			return y;
-		});
-	};
+		return y;
+	});
 
-	YTMA.grabIdAndSite = function (link, cb) {
-		var uri = link.href || link.src, id, site, match;
+	YTMA.grabIdAndSite = (link, cb) => {
+		let uri = link.href || link.src;
+		let id;
+		let site;
+		let match;
 		try {
 			site = YTMA.reg.siteByTest[YTMA.reg.siteExpressions.test(uri) ? RegExp.lastMatch : ''];
 			// console.log(site);
@@ -416,17 +900,15 @@ Whitelist these on Ghostery
 
 			console.log(id, site, match);
 			if (id && YTMA.DB.sites[site]) {
-				return cb({ id: id, site: site }, null);
+				return cb({ id, site }, null);
 			}
-			throw TypeError('Invalid ID/Site: ' + id + ' @ ' + site);
+			throw TypeError(`Invalid ID/Site: ${id} @ ${site}`);
 		} catch (e) {
 			return cb(null, e);
 		}
 	};
 
-	YTMA.escapeId = function (id) {
-		return (id += '').replace(/(?:\W)/g, '_');
-	};
+	YTMA.escapeId = id => `${id}`.replace(/(?:\W)/g, '_');
 
 	YTMA.route = {
 		host: document.location.host.replace('www.', ''),
@@ -487,13 +969,13 @@ Whitelist these on Ghostery
 					YTMA.route.control.$.runOnce(loop);
 				},
 				'resetera.com': function () {
-					$$.css('.ytm_control li ul li { height: 24px !important }');
+					$$.css('.ytm_options li ul li { height: 24px !important }');
 					$$.css('.bbCodeQuote .quoteContainer .quote { max-height: initial } .bbCodeQuote .quoteContainer .quoteExpand.quoteCut { display: none }');
 					$$.css('.bbCodeQuote .ytm_block iframe, .bbCodeQuote .ytm_block [data-s9e-mediaembed], .bbCodeQuote .ytm_block .fb_iframe_widget, .bbCodeQuote .ytm_block object, .bbCodeQuote .ytm_block embed { max-height: initial; max-width: initial }');
 					this.$generic();
 				},
 				'gfycat.com': function () {
-					var v = document.querySelector('video');
+					const v = document.querySelector('video');
 					v.controls = true;
 					$$.css('body,html {overflow:hidden;height:100%;width:100%} video {display:table;height:100%;margin:0 auto;}');
 					document.body.appendChild(v);
@@ -501,8 +983,8 @@ Whitelist these on Ghostery
 				'vine.co': function () {
 					// console.log('vine.co');
 
-					window.addEventListener('resize', function () {
-						$$.s('[style]', function (e) {
+					window.addEventListener('resize', () => {
+						$$.s('[style]', e => {
 							e.removeAttribute('style');
 						});
 					});
@@ -516,7 +998,7 @@ Whitelist these on Ghostery
 		}
 	};
 
-	YTMA.main = function () {
+	YTMA.main = () => {
 		YTMA.reg.siteExpressions = YTMA.DB.views.getAllSiteRegExps();
 		// console.log(YTMA.reg.siteExpressions);
 		YTMA.route.load();
@@ -524,13 +1006,8 @@ Whitelist these on Ghostery
 
 	YTMA.set = {};
 
-	YTMA.collect = function (id) {
-		var i, a = [];
-		for (i in YTMA.set) {
-			if (YTMA.set.hasOwnProperty(i) && YTMA.set[i].data.id === id) {
-				a.push(YTMA.set[i]);
-			}
-		}
+	YTMA.collect = id => {
+		const a = Object.values(YTMA.set).filter(ytma => ytma && ytma.data.id === id);
 		return a;
 	};
 
@@ -559,10 +1036,11 @@ Whitelist these on Ghostery
 		},
 		fix: {
 			soundcloud: function (uri) {
-				var match = YTMA.DB.sites.soundcloud.matcher.exec(uri), id;
+				const match = YTMA.DB.sites.soundcloud.matcher.exec(uri);
+				let id;
 				if (match) {
 					id = match[1].split('/', 2).join('/');
-					uri = removeSearch('https://soundcloud.com/' + id, true);
+					uri = removeSearch(`https://soundcloud.com/${id}`, true);
 				}
 
 				return uri;
@@ -571,34 +1049,38 @@ Whitelist these on Ghostery
 	};
 
 	YTMA.selector = { // to build the selector
-		parentBlacklist: ['.smallfont', '.colhead_dark', '.spoiler', 'pre', '.messageUserInfo', '.bbWrapper'],
+		parentBlacklist: ['.smallfont', '.colhead_dark', '.spoiler', 'pre', '.messageUserInfo', '.fr-box'],
 		ignore: function () {
-			var i, j, ignore = [], all = YTMA.DB.views.getAllSiteSelectors().split(','), blacklist = this.parentBlacklist;
+			let i;
+			let j;
+			const ignore = [];
+			const all = YTMA.DB.views.getAllSiteSelectors().split(',');
+			const blacklist = this.parentBlacklist;
 			for (i = 0; i < blacklist.length; i++) {
 				for (j = 0; j < all.length; j++) {
-					ignore.push(blacklist[i] + ' ' + all[j]);
+					ignore.push(`${blacklist[i]} ${all[j]}`);
 				}
 			}
 			//console.log(ignore);
 			return ignore.join(',');
 		},
 		iframes: function () { // for resetera, convert iframes back to anchors
-			$$.x('.message-body iframe').forEach(function (f) {
+			$$.x('.message-body iframe').forEach(f => {
 				if (/vi\/(.+?)\/hqdefault/.test(f.style.backgroundImage)) {
-					var src = 'https://youtu.be/' + RegExp.$1,
-						span = f.closest('[data-s9e-mediaembed]');
-					span.insertAdjacentHTML('beforebegin', '<a href=' + src + '>youtube</a>');
+					const src = `https://youtu.be/${RegExp.$1}`;
+					const span = f.closest('[data-s9e-mediaembed]');
+					span.insertAdjacentHTML('beforebegin', `<a href="${src}">youtube</a>`);
 					span.parentElement.removeChild(span);
 				}
 			});
 		},
 		links: function () {
-			var links;
+			let links;
 
-			$$.x(YTMA.selector.ignore()).map(function (el) { el.setAttribute('ytmaignore', true); });
+			$$.x(YTMA.selector.ignore()).map(el => { el.setAttribute('ytmaignore', true); });
 
-			links = $$.x(YTMA.DB.views.getAllSiteSelectors()).filter(function (el) {
-				var r = !el.hasAttribute('ytmaprocessed') && !el.hasAttribute('ytmaignore');
+			links = $$.x(YTMA.DB.views.getAllSiteSelectors()).filter(el => {
+				const r = !el.hasAttribute('ytmaprocessed') && !el.hasAttribute('ytmaignore');
 				el.setAttribute('ytmaprocessed', true);
 				return r;
 			});
@@ -607,7 +1089,7 @@ Whitelist these on Ghostery
 		},
 		processor: function () {
 			this.iframes();
-			var links = this.links();
+			const links = this.links();
 
 			if (links.length > 0) {
 				links.forEach(YTMA.create);
@@ -660,7 +1142,7 @@ Whitelist these on Ghostery
 			if (property === 'yt_volume') {
 				return n >= 0 && n <= 100 ? (+n) : YTMA.user.defaults()[property];
 			}
-			return YTMA.user.valid[property].indexOf(n) > -1 ? n : YTMA.user.defaults()[property];
+			return YTMA.user.valid[property].includes(n) ? n : YTMA.user.defaults()[property];
 		},
 		defaults: function () {
 			return {
@@ -676,7 +1158,7 @@ Whitelist these on Ghostery
 			};
 		},
 		load: function () {
-			var s = strg.grab(YTMA.user.KEY, {});
+			const s = strg.grab(YTMA.user.KEY, {});
 
 			YTMA.user.preferences = {
 				size: YTMA.user.validate('size', s.size),
@@ -690,7 +1172,7 @@ Whitelist these on Ghostery
 				yt_volume: YTMA.user.validate('yt_volume', s.yt_volume)
 			};
 
-			$$.o(YTMA.user.mapping, function (key, val) {
+			$$.o(YTMA.user.mapping, (key, val) => {
 				if (!val.hasOwnProperty('indexOf')) {
 					YTMA.user.preferences[key] = val[YTMA.user.valid[key].indexOf(YTMA.user.preferences[key])];
 				}
@@ -699,21 +1181,21 @@ Whitelist these on Ghostery
 			console.log('loaded: ', YTMA.user.preferences);
 		},
 		mark: function () {
-			var a = {};
+			const a = {};
 			a.ytma__focus = !!YTMA.user.preferences.focus;
 			a.ytma__autoShow = !!YTMA.user.preferences.autoShow;
 			a.ytma__yt_nocookie = !!YTMA.user.preferences.yt_nocookie;
 			a.ytma__yt_annotation = !!YTMA.user.preferences.yt_annotation;
 			a.ytma__yt_volume = YTMA.user.preferences.yt_volume;
-			a['ytma__ratio' + YTMA.user.preferences.ratio] = true;
-			a['ytma__size' + YTMA.user.preferences.size] = true;
-			a['ytma__desc' + YTMA.user.preferences.desc] = true;
-			a['ytma__quality' + YTMA.user.preferences.quality] = !!YTMA.user.preferences.quality;
+			a[`ytma__ratio${YTMA.user.preferences.ratio}`] = true;
+			a[`ytma__size${YTMA.user.preferences.size}`] = true;
+			a[`ytma__desc${YTMA.user.preferences.desc}`] = true;
+			a[`ytma__quality${YTMA.user.preferences.quality}`] = !!YTMA.user.preferences.quality;
 
 			// console.log('marking', a);
-			$$.o(a, function (id, val) {
+			$$.o(a, (id, val) => {
 				try {
-					var el = document.getElementById(id);
+					const el = document.getElementById(id);
 					el.checked = val;
 					el.value = val;
 				} catch (e) {
@@ -723,14 +1205,13 @@ Whitelist these on Ghostery
 		},
 		events: {
 			save: function (e) {
-				var o = {};
+				const o = {};
 
 				if (e && (/(?:INPUT|LABEL)/i).test(e.target.nodeName)) {
 					// console.log(YTMA.user.$form.querySelectorAll('[data-key]'));
 					// [data-key]:checked
-					$$.ary(YTMA.user.$form.querySelectorAll('[data-key]')).forEach(function (e) {
-						var key;
-						key = e.dataset.key;
+					Array.from(YTMA.user.$form.querySelectorAll('[data-key]')).forEach(e => {
+						let key = e.dataset.key;
 
 						if (e.type === 'checkbox') {
 							o[key] = +e.checked;
@@ -800,20 +1281,20 @@ Whitelist these on Ghostery
 			},
 			showMedia: function () {
 				console.log('showMedia');
-				return new YTMA.Scroll('a.ytm_scroll:not([data-ytmscroll="false"])', function (link) {
+				return new YTMA.Scroll('a.ytm_scroll:not([data-ytmscroll="false"])', link => {
 					if (YTMA.Scroll.visibleAll(link, 50)) {
-						$$.s('var[data-ytmsid="' + link.dataset.ytmsid + '"]:not([data-ytmscroll="false"])', function (trigger) {
-							var ui = YTMA.UI.createFromTrigger(trigger);
+						$$.s(`var[data-ytmsid="${link.dataset.ytmsid}"]:not([data-ytmscroll="false"])`, trigger => {
+							const ui = Control.createFromTrigger(trigger);
 							ui.showOnScroll(link);
 						});
 					}
 				});
 			},
 			toggleMedia: function () {
-				return new YTMA.Scroll('div.ytm_panel_switcher', function (div) {
-					var v = div.querySelector('video'),
-						paused = v && (v.paused || v.ended),
-						ui = YTMA.set[div.dataset.ytmuid].getUI();
+				return new YTMA.Scroll('div.ytm_panel_switcher', div => {
+					const v = div.querySelector('video');
+					const paused = v && (v.paused || v.ended);
+					const ui = YTMA.set[div.dataset.ytmuid].getControl();
 
 					if (paused && !YTMA.Scroll.visibleAll(div, 0)) {
 						return ui.play.switchStandby();
@@ -837,7 +1318,7 @@ Whitelist these on Ghostery
 			onScrollLoadDescriptions: function (ajax) {
 				if (YTMA.user.fn.$scroller) { YTMA.user.fn.$scroller.stop(); }
 
-				YTMA.user.fn.$scroller = new YTMA.Scroll('span.ytm_manual > a.ytm_title:not(.ytm_error)', function (a) {
+				YTMA.user.fn.$scroller = new YTMA.Scroll('span.ytm_manual > a.ytm_title:not(.ytm_error)', a => {
 					if (YTMA.Scroll.visibleAll(a, 200)) {
 						if (ajax) {
 							YTMA.ajax.loadFromDataset(a.dataset);
@@ -853,30 +1334,38 @@ Whitelist these on Ghostery
 				});
 			},
 			makeForm: function () {
-				var e, f = [
-					'<div id="ytm_settings" class="ytm_sans ytm_block ytm_normalize"><form action="" title="Double click to close"><div id="ytm_settingst">ytma! Site Settings</div><div class="ytm_field_container">',
-					'<fieldset><legend title="Load descriptions from the content sever.">Load Descriptions</legend><p><span><input id="ytma__desc0" type="radio" data-num="0" name="ytma__desc" data-key="desc"><label for="ytma__desc0" title="Load descriptions on demand">Manually</label></span><span><input id="ytma__desc1" type="radio" data-num="1" name="ytma__desc" data-key="desc"><label for="ytma__desc1" title="Load descriptions as they become visible on the screen.">Automatically, on scrolling</label></span></p></fieldset>',
-					'<fieldset><legend>HTML5 Players</legend><p><input name="ytma__autoShow" data-key="autoShow" id="ytma__autoShow" type="checkbox"><label for="ytma__autoShow">Automatically show WebM, MP4 and Soundcloud players</label></p></fieldset>',
-					'<fieldset><legend>Player Size</legend><p><span><input type="radio" name="ytma__size" data-key="size" data-num="240" id="ytma__size240" /><label for="ytma__size240">S <small>240p</small></label></span><span><input name="ytma__size" data-key="size" type="radio" id="ytma__size360" data-num="360" /><label for="ytma__size360">M <small>360p</small></label></span><span><input type="radio" name="ytma__size" data-key="size" data-num="480" id="ytma__size480" /><label for="ytma__size480">L <small>480p</small></label></span><span><input type="radio" name="ytma__size" data-key="size" data-num="720" id="ytma__size720" /><label for="ytma__size720">X <small>720p</small></label></span></p></fieldset>',
-					'<fieldset><legend>Quality</legend><p><span><input name="ytma__quality" data-key="quality" data-num="240" id="ytma__quality240" type="radio"><label for="ytma__quality240">240p</label></span><span><input name="ytma__quality" data-key="quality" id="ytma__quality360" data-num="360" type="radio"><label for="ytma__quality360">360p</label></span><span><input name="ytma__quality" data-key="quality" data-num="480" id="ytma__quality480" type="radio"><label for="ytma__quality480">480p</label></span><span><input name="ytma__quality" data-key="quality" data-num="720" id="ytma__quality720" type="radio"><label for="ytma__quality720">720p</label></span><span><input name="ytma__quality" data-key="quality" data-num="1080" id="ytma__quality1080" type="radio"><label for="ytma__quality1080">1080p</label></span></p></fieldset>',
-					'<fieldset><legend>Aspect Ratio</legend><p><span><input name="ytma__ratio" data-key="ratio" type="radio" id="ytma__ratio2" data-num="2" /><label for="ytma__ratio2">16:9</label></span><span><input type="radio" name="ytma__ratio" data-key="ratio" data-num="1" id="ytma__ratio1" /><label for="ytma__ratio1">4:3</label></span></p></fieldset>',
-					'<fieldset><legend>YouTube</legend>',
-					'<p><input name="ytma__yt_annotation" data-key="yt_annotation" type="checkbox" id="ytma__yt_annotation" /><label for="ytma__yt_annotation">Enable video annotations</label></p>',
-					'<p><input name="ytma__yt_nocookie" data-key="yt_nocookie" type="checkbox" id="ytma__yt_nocookie" /><label for="ytma__yt_nocookie">Use https://youtube-nocookie.com to load videos</label></p>',
-					'</fieldset>',
-					'<fieldset><legend>Window Focus</legend><p><input name="ytma__focus" data-key="focus" type="checkbox" id="ytma__focus" value="focus" /><label for="ytma__focus">After clicking the thumbnail, set the video at the top of the window.</label></p></fieldset>',
-					'</div><p><small id="ytm_settings_error" class="ytm_error ytm_none ytm_title">Error! Your settings could not be saved.</small></p><p id="ytm_opts"><button type="button" id="ytmaclose">Close</button> <button type="button" id="ytmareset">Reset</button> <button type="button" id="ytmaclear" title="Remove all video descriptions that have been cached">Reset & Remove Cache</button></p></form></div>'
-				].join('');
+				const template = `
+					<div id="ytm_settings" class="ytm_sans ytm_block ytm_normalize">
+						<form action="" title="Double click to close">
+							<div id="ytm_settingst">ytma! Site Settings</div><div class="ytm_field_container">
+								<fieldset><legend title="Load descriptions from the content sever.">Load Descriptions</legend><p><span><input id="ytma__desc0" type="radio" data-num="0" name="ytma__desc" data-key="desc"><label for="ytma__desc0" title="Load descriptions on demand">Manually</label></span><span><input id="ytma__desc1" type="radio" data-num="1" name="ytma__desc" data-key="desc"><label for="ytma__desc1" title="Load descriptions as they become visible on the screen.">Automatically, on scrolling</label></span></p></fieldset>
+								<fieldset><legend>HTML5 Players</legend><p><input name="ytma__autoShow" data-key="autoShow" id="ytma__autoShow" type="checkbox"><label for="ytma__autoShow">Automatically show WebM, MP4 and Soundcloud players</label></p></fieldset>
+								<fieldset><legend>Player Size</legend><p><span><input type="radio" name="ytma__size" data-key="size" data-num="240" id="ytma__size240" /><label for="ytma__size240">S <small>240p</small></label></span><span><input name="ytma__size" data-key="size" type="radio" id="ytma__size360" data-num="360" /><label for="ytma__size360">M <small>360p</small></label></span><span><input type="radio" name="ytma__size" data-key="size" data-num="480" id="ytma__size480" /><label for="ytma__size480">L <small>480p</small></label></span><span><input type="radio" name="ytma__size" data-key="size" data-num="720" id="ytma__size720" /><label for="ytma__size720">X <small>720p</small></label></span></p></fieldset>
+								<fieldset><legend>Quality</legend><p><span><input name="ytma__quality" data-key="quality" data-num="240" id="ytma__quality240" type="radio"><label for="ytma__quality240">240p</label></span><span><input name="ytma__quality" data-key="quality" id="ytma__quality360" data-num="360" type="radio"><label for="ytma__quality360">360p</label></span><span><input name="ytma__quality" data-key="quality" data-num="480" id="ytma__quality480" type="radio"><label for="ytma__quality480">480p</label></span><span><input name="ytma__quality" data-key="quality" data-num="720" id="ytma__quality720" type="radio"><label for="ytma__quality720">720p</label></span><span><input name="ytma__quality" data-key="quality" data-num="1080" id="ytma__quality1080" type="radio"><label for="ytma__quality1080">1080p</label></span></p></fieldset>
+								<fieldset><legend>Aspect Ratio</legend><p><span><input name="ytma__ratio" data-key="ratio" type="radio" id="ytma__ratio2" data-num="2" /><label for="ytma__ratio2">16:9</label></span><span><input type="radio" name="ytma__ratio" data-key="ratio" data-num="1" id="ytma__ratio1" /><label for="ytma__ratio1">4:3</label></span></p></fieldset>
+								<fieldset><legend>YouTube</legend>
+									<p><input name="ytma__yt_annotation" data-key="yt_annotation" type="checkbox" id="ytma__yt_annotation" /><label for="ytma__yt_annotation">Enable video annotations</label></p>
+									<p><input name="ytma__yt_nocookie" data-key="yt_nocookie" type="checkbox" id="ytma__yt_nocookie" /><label for="ytma__yt_nocookie">Use https://youtube-nocookie.com to load videos</label></p>
+								</fieldset>
+								<fieldset><legend>Window Focus</legend><p><input name="ytma__focus" data-key="focus" type="checkbox" id="ytma__focus" value="focus" /><label for="ytma__focus">After clicking the thumbnail, set the video at the top of the window.</label></p></fieldset>
+							</div>
+							<p><small id="ytm_settings_error" class="ytm_error ytm_none ytm_title">Error! Your settings could not be saved.</small></p>
+							<p id="ytm_opts">
+								<button type="button" id="ytmaclose">Close</button> <button type="button" id="ytmareset">Reset</button> <button type="button" id="ytmaclear" title="Remove all video descriptions that have been cached">Reset & Remove Cache</button>
+							</p>
+						</form>
+					</div>
+				`;
 
-				YTMA.user.$form = $$.e('div', { className: 'ytm_fix_center ytm_none ytm_box', innerHTML: f }, document.body);
+				YTMA.user.$form = $$.e('div', { className: 'ytm_fix_center ytm_none ytm_box', innerHTML: template }, document.body);
 				YTMA.user.error = document.getElementById('ytm_settings_error');
 
-				e = YTMA.Scroll.debounce(YTMA.user.events.save, 500);
-				YTMA.user.$form.addEventListener('submit', function (evt) { evt.preventDefault(); }, false);
-				YTMA.user.$form.addEventListener('keyup', e, false);
-				YTMA.user.$form.addEventListener('click', e, false);
-
+				const bouncer = YTMA.Scroll.debounce(YTMA.user.events.save, 500);
+				YTMA.user.$form.addEventListener('submit', evt => { evt.preventDefault(); }, false);
+				YTMA.user.$form.addEventListener('keyup', bouncer, false);
+				YTMA.user.$form.addEventListener('click', bouncer, false);
 				YTMA.user.$form.addEventListener('dblclick', YTMA.user.events.formToggle, false);
+
 				document.getElementById('ytmaclose').addEventListener('click', YTMA.user.events.formToggle, false);
 				document.getElementById('ytmareset').addEventListener('click', YTMA.user.events.reset, false);
 				document.getElementById('ytmaclear').addEventListener('click', YTMA.user.events.clear, false);
@@ -885,39 +1374,31 @@ Whitelist these on Ghostery
 		}
 	};
 
-	YTMA.css = function () {
-		var playerCss = YTMA.Player.css.generator(),
-			loadingIcon = 'data:image/gif;base64,R0lGODlhDgAKAJEAAP///+BKV////wAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQFCgACACwAAAAADgAKAAACHFSOeQYI71p6MtAJz41162yBH+do5Ih1kKG0QgEAIfkEBQoAAgAsAAABAA0ACAAAAhSUYGEoerkgdIzKGlu2ET/9ceJmFAAh+QQFCgACACwAAAEADQAIAAACFJRhcbmiglx78SXKYK6za+NxHyYVACH5BAUKAAIALAAAAQANAAgAAAIWVCSAl+hqEGRTLhtbdvTqnlUf9nhTAQAh+QQFCgACACwAAAEADQAIAAACFZRiYCh6uaCRzNXYsKVT+5eBW3gJBQAh+QQJCgACACwAAAAADgAKAAACGpSPaWGwfZhwQtIK8VTUvuxpm9Yp4XlmpiIUADs=';
-
-		// Roboto font-o
-		// $$.e('link', {
-		// rel: 'stylesheet',
-		// $type: 'text/css',
-		// href: 'https://fonts.googleapis.com/css?family=Roboto'
-		// }, document.body);
+	YTMA.css = () => {
+		const playerCss = Player.css.generator();
+		const loadingIcon = 'data:image/gif;base64,R0lGODlhDgAKAJEAAP///+BKV////wAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQFCgACACwAAAAADgAKAAACHFSOeQYI71p6MtAJz41162yBH+do5Ih1kKG0QgEAIfkEBQoAAgAsAAABAA0ACAAAAhSUYGEoerkgdIzKGlu2ET/9ceJmFAAh+QQFCgACACwAAAEADQAIAAACFJRhcbmiglx78SXKYK6za+NxHyYVACH5BAUKAAIALAAAAQANAAgAAAIWVCSAl+hqEGRTLhtbdvTqnlUf9nhTAQAh+QQFCgACACwAAAEADQAIAAACFZRiYCh6uaCRzNXYsKVT+5eBW3gJBQAh+QQJCgACACwAAAAADgAKAAACGpSPaWGwfZhwQtIK8VTUvuxpm9Yp4XlmpiIUADs=';
 
 		// console.log(playerCss);
 		$$.css(playerCss);
 
 		// images
 		// todo update(site, size, padding)
-		$$.css([
-			'.ytm_loading{background:url(', loadingIcon, ') 0 3px no-repeat;}',
-			'.ytm_link{background:url(', YTMA.DB.sites.youtube.favicon, ') 0 center no-repeat !important;margin-left:4px;padding-left:20px!important;}',
-			'.ytm_link.ytm_link_vimeo{background-image:url(', YTMA.DB.sites.vimeo.favicon, ') !important;background-size:12px 12px !important;padding-left:18px!important}',
-			'.ytm_link.ytm_link_vine{background-image:url(', YTMA.DB.sites.vine.favicon, ') !important;background-size:10px 10px!important;padding-left:16px!important}',
-			'.ytm_link.ytm_link_soundcloud{background-image:url(', YTMA.DB.sites.soundcloud.favicon, ')!important;padding-left:17px!important}',
-			'.ytm_link.ytm_link_html5{background-image:url(', YTMA.DB.sites.html5.favicon, ') !important;padding-left:16px!important}',
-			'.ytm_link.ytm_link_gfycat{background-image:url(', YTMA.DB.sites.gfycat.favicon, ') !important;background-size:12px 12px !important;padding-left:16px!important;}',
-			'.ytm_link.ytm_link_imgur{background-image:url(', YTMA.DB.sites.imgur.favicon, ') !important;background-size:12px 12px !important;padding-left:16px!important}',
-			'.ytm_link.ytm_link_streamable{background-image:url(', YTMA.DB.sites.streamable.favicon, ') !important; background-size: 12px 12px !important;padding-left: 14px !important;}'
-		].join(''));
+		$$.css(`
+			.ytm_loading{background:url(${loadingIcon}) 0 3px no-repeat;}',
+			.ytm_link{background:url(${YTMA.DB.sites.youtube.favicon}) 0 center no-repeat !important;margin-left:4px;padding-left:20px!important;}
+			.ytm_link.ytm_link_vimeo{background-image:url(${YTMA.DB.sites.vimeo.favicon}) !important;background-size:12px 12px !important;padding-left:18px!important}
+			.ytm_link.ytm_link_vine{background-image:url(${YTMA.DB.sites.vine.favicon}) !important;background-size:10px 10px!important;padding-left:16px!important}
+			.ytm_link.ytm_link_soundcloud{background-image:url(${YTMA.DB.sites.soundcloud.favicon})!important;padding-left:17px!important}
+			.ytm_link.ytm_link_html5{background-image:url(${YTMA.DB.sites.html5.favicon}) !important;padding-left:16px!important}
+			.ytm_link.ytm_link_gfycat{background-image:url(${YTMA.DB.sites.gfycat.favicon}) !important;background-size:12px 12px !important;padding-left:16px!important;}
+			.ytm_link.ytm_link_imgur{background-image:url(${YTMA.DB.sites.imgur.favicon}) !important;background-size:12px 12px !important;padding-left:16px!important}
+			.ytm_link.ytm_link_streamable{background-image:url(${YTMA.DB.sites.streamable.favicon}) !important; background-size: 12px 12px !important;padding-left: 14px !important;}
+		`);
 
 		// todo
 		// if (window.NO_YTMA_CSS) { return; }
 
-		$$.css('.ytm_none,.ytm_link br{display:none!important}.ytm_box{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box}.ytm_block{display:block;position:relative;clear:both;text-align:left;border:0;margin:0;padding:0;overflow:hidden}.ytm_normalize{font-weight:400!important;font-style:normal!important;line-height:1.2!important}.ytm_sans{font-family:Arial,Helvetica,sans-serif!important}.ytm_spacer{overflow:auto;margin:0 0 6px;padding:4px}.ytm_spacer.ytm_site_slim{display:inline}.ytm_clear:after{content:"";display:table;clear:both}.ytm_center{text-align:center}.ytm_link b,.ytm_link strong{font-weight:400!important}.ytm_link u{text-decoration:none!important}.ytm_link i,.ytm_link em{font-style:normal!important}.ytm_trigger{width:118px;height:66px;background-color:#262626!important;cursor:pointer;background-position:-1px -12px;float:left;box-shadow:2px 2px rgba(0,0,0,.3);background-size:auto 90px!important;color:#fff;text-shadow:#333 0 0 2px;font-size:13px}.ytm_trigger:hover{box-shadow:2px 2px #60656b80;opacity:.95}.ytm_trigger var{z-index:2;height:100%;width:100%;position:absolute;left:0;top:0;text-align:right}.ytm_label{display:block;padding:3px 6px;line-height:1.2;font-style:normal}.ytm_init{height:22px;background:rgba(11,11,11,.62);padding:4px 25px 6px 6px}.ytm_site_vine .ytm_trigger{background-color:#90ee90!important;background-size:120px auto!important}.ytm_site_slim .ytm_trigger{background:#e34c26!important;height:auto;box-shadow:0 0 2px #ffdb9d inset,2px 2px rgba(0,0,0,.3);margin:0 3px 0 0;width:auto;transition:all .3s ease-in-out 0s}.ytm_site_slim .ytm_trigger:hover{opacity:.8}.ytm_site_slim .ytm_label{text-shadow:0 0 1px #f06529}.ytm_site_slim .ytm_init{background:transparent}.ytm_bd{float:left;max-width:500px;margin:2px 10px;font-size:90%}.ytm_title{font-weight:700}.ytm_error{color:#cc2f24;font-style:italic}.ytm_loading{font-style:italic;padding:1px 1.5em}.ytm_descr{word-wrap:break-word;max-height:48px;overflow:auto;padding-right:20px}.ytm_descr[data-full]{cursor:pointer}.ytm_descr_open{resize:both;white-space:pre-line}.ytm_descr_open[style]{max-height:none}.ytm_projector{margin-bottom:4px}ul.ytm_control{overflow:hidden;margin:0!important;padding:3px 0 1px;list-style-position:outside!important}.ytm_control li{display:inline;margin:0!important;padding:0!important}.ytm_control li>ul{display:inline-block;margin:0;padding:0 1px 0 0}.ytm_control li ul li{-webkit-user-select:none;-moz-user-select:none;-o-user-select:none;user-select:none;list-style-type:none;cursor:pointer;float:left;color:#858585;border:1px solid #1d1d1d;border-bottom:1px solid #181818;border-top:1px solid #292929;box-shadow:0 0 1px #555;height:14px;font-size:12px!important;line-height:12px!important;background:#222;background:linear-gradient(#2d2c2c,#222);margin:0!important;padding:5px 9px 3px!important}.ytm_control li ul li:first-child{border-radius:2px 0 0 2px}.ytm_control li ul li:last-child{border-left:0!important;border-radius:0 2px 2px 0;margin:0 2px 0 0!important}.ytm_control li ul li:first-child:last-child,.ytm_li_setting{border-radius:2px}.ytm_control li ul li:hover{color:#ccc;text-shadow:1px 1px 0 #333;background:#181818}.ytm_control li ul li[id]{color:#ddd;text-shadow:0 0 2px #444}.ytm_panel_size{background:#000;max-width:100%;}.ytm_panel_switcher[data-standby="true"]{background:#111}.ytm_panel_switcher[data-standby="true"]:after{cursor:cell;color:#0e0e0e;content:"ytma!";display:block;font-size:85px;font-style:italic;font-weight:700;left:50%;position:absolute;text-shadow:2px 1px #181818,-1px -1px #0a0a0a;top:50%;transform:translate(-50%,-50%)}.ytm_site_soundcloud .ytm_panel_size.ytm_soundcloud-playlist{height:334px!important}.ytm_fix_center{background:rgba(51,51,51,.41);height:100%;left:0;position:fixed;top:0;width:100%;z-index:99998}#ytm_settings{z-index:99999;max-width:500px;max-height:85%;overflow:auto;background:#fbfbfb;border:1px solid #bbb;color:#444;box-shadow:0 0 5px rgba(0,0,0,.2),0 0 3px rgba(239,239,239,.1) inset;margin:4% auto;padding:4px 8px 0}#ytm_settings p{margin:5px 0;padding:0}#ytm_settings fieldset{vertical-align:top;border-radius:3px;border:1px solid #ccc;margin:0 0 5px;padding:3px}#ytm_settings legend{padding:3px}#ytm_settings fieldset span{display:inline-block;min-width:5em}#ytm_settings input{vertical-align:baseline!important;margin:3px 5px!important}#ytm_settingst{font-size:110%;border-bottom:1px solid #d00;margin:3px 0 9px;padding:0 3px 3px}#ytm_settings label{cursor:pointer}#ytm_settings small{font-size:90%}#ytm_opts button{cursor:pointer;margin:10px 5px 8px 2px;padding:3px;border:1px solid #adadad;border-radius:2px;background:#eee;font-size:90%}#ytm_opts button:hover{background:#ddd}');
-		// $$.css('.ytm_site_youtube .ytm_sans { font-family: \'Roboto\'; }');
+		$$.css('.ytm_none,.ytm_link br{display:none!important}.ytm_box{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box}.ytm_block{display:block;position:relative;clear:both;text-align:left;border:0;margin:0;padding:0;overflow:hidden}.ytm_normalize{font-weight:400!important;font-style:normal!important;line-height:1.2!important}.ytm_sans{font-family:Arial,Helvetica,sans-serif!important}.ytm_spacer{overflow:auto;margin:0 0 6px;padding:4px}.ytm_spacer.ytm_site_slim{display:inline}.ytm_clear:after{content:"";display:table;clear:both}.ytm_center{text-align:center}.ytm_link b,.ytm_link strong{font-weight:400!important}.ytm_link u{text-decoration:none!important}.ytm_link i,.ytm_link em{font-style:normal!important}.ytm_trigger{width:118px;height:66px;background-color:#262626!important;cursor:pointer;background-position:-1px -12px;float:left;box-shadow:2px 2px rgba(0,0,0,.3);background-size:auto 90px!important;color:#fff;text-shadow:#333 0 0 2px;font-size:13px}.ytm_trigger:hover{box-shadow:2px 2px #60656b80;opacity:.95}.ytm_trigger var{z-index:2;height:100%;width:100%;position:absolute;left:0;top:0;text-align:right}.ytm_label{display:block;padding:3px 6px;line-height:1.2;font-style:normal}.ytm_init{height:22px;background:rgba(11,11,11,.62);padding:4px 25px 6px 6px}.ytm_site_vine .ytm_trigger{background-color:#90ee90!important;background-size:120px auto!important}.ytm_site_slim .ytm_trigger{background:#e34c26!important;height:auto;box-shadow:0 0 2px #ffdb9d inset,2px 2px rgba(0,0,0,.3);margin:0 3px 0 0;width:auto;transition:all .3s ease-in-out 0s}.ytm_site_slim .ytm_trigger:hover{opacity:.8}.ytm_site_slim .ytm_label{text-shadow:0 0 1px #f06529}.ytm_site_slim .ytm_init{background:transparent}.ytm_bd{float:left;max-width:500px;margin:2px 10px;font-size:90%}.ytm_title{font-weight:700}.ytm_error{color:#cc2f24;font-style:italic}.ytm_loading{font-style:italic;padding:1px 1.5em}.ytm_descr{word-wrap:break-word;max-height:48px;overflow:auto;padding-right:20px}.ytm_descr[data-full]{cursor:pointer}.ytm_descr_open{resize:both;white-space:pre-line}.ytm_descr_open[style]{max-height:none}.ytm_projector{margin-bottom:4px}ul.ytm_options{overflow:hidden;margin:0!important;padding:3px 0 1px;list-style-position:outside!important}.ytm_options li{display:inline;margin:0!important;padding:0!important}.ytm_options li>ul{display:inline-block;margin:0;padding:0 1px 0 0}.ytm_options li ul li{-webkit-user-select:none;-moz-user-select:none;-o-user-select:none;user-select:none;list-style-type:none;cursor:pointer;float:left;color:#858585;border:1px solid #1d1d1d;border-bottom:1px solid #181818;border-top:1px solid #292929;box-shadow:0 0 1px #555;height:14px;font-size:12px!important;line-height:12px!important;background:#222;background:linear-gradient(#2d2c2c,#222);margin:0!important;padding:5px 9px 3px!important}.ytm_options li ul li:first-child{border-radius:2px 0 0 2px}.ytm_options li ul li:last-child{border-left:0!important;border-radius:0 2px 2px 0;margin:0 2px 0 0!important}.ytm_options li ul li:first-child:last-child,.ytm_li_setting{border-radius:2px}.ytm_options li ul li:hover{color:#ccc;text-shadow:1px 1px 0 #333;background:#181818}.ytm_options li ul li[id]{color:#ddd;text-shadow:0 0 2px #444}.ytm_panel_size{background:#000;max-width:100%;}.ytm_panel_switcher[data-standby="true"]{background:#111}.ytm_panel_switcher[data-standby="true"]:after{cursor:cell;color:#0e0e0e;content:"ytma!";display:block;font-size:85px;font-style:italic;font-weight:700;left:50%;position:absolute;text-shadow:2px 1px #181818,-1px -1px #0a0a0a;top:50%;transform:translate(-50%,-50%)}.ytm_site_soundcloud .ytm_panel_size.ytm_soundcloud-playlist{height:334px!important}.ytm_fix_center{background:rgba(51,51,51,.41);height:100%;left:0;position:fixed;top:0;width:100%;z-index:99998}#ytm_settings{z-index:99999;max-width:500px;max-height:85%;overflow:auto;background:#fbfbfb;border:1px solid #bbb;color:#444;box-shadow:0 0 5px rgba(0,0,0,.2),0 0 3px rgba(239,239,239,.1) inset;margin:4% auto;padding:4px 8px 0}#ytm_settings p{margin:5px 0;padding:0}#ytm_settings fieldset{vertical-align:top;border-radius:3px;border:1px solid #ccc;margin:0 0 5px;padding:3px}#ytm_settings legend{padding:3px}#ytm_settings fieldset span{display:inline-block;min-width:5em}#ytm_settings input{vertical-align:baseline!important;margin:3px 5px!important}#ytm_settingst{font-size:110%;border-bottom:1px solid #d00;margin:3px 0 9px;padding:0 3px 3px}#ytm_settings label{cursor:pointer}#ytm_settings small{font-size:90%}#ytm_opts button{cursor:pointer;margin:10px 5px 8px 2px;padding:3px;border:1px solid #adadad;border-radius:2px;background:#eee;font-size:90%}#ytm_opts button:hover{background:#ddd}');
 	};
 
 	YTMA.ajax = {
@@ -940,10 +1421,10 @@ Whitelist these on Ghostery
 				return this.load(dataset.ytmsite, dataset.ytmid, dataset.ytmuri);
 			}
 		},
-		loadFromCacheDataset: function (dataset) {
-			var cache = YTMA.external.dataFromStorage(dataset.ytmsite, dataset.ytmid);
+		loadFromCacheDataset: function({ytmsite, ytmid}) {
+			const cache = YTMA.external.dataFromStorage(ytmsite, ytmid);
 
-			console.log('YTMA.ajax.cache:', dataset.ytmsite, dataset.ytmid);
+			console.log('YTMA.ajax.cache:', ytmsite, ytmid);
 			console.log('@cache:', cache);
 
 			if (cache) { YTMA.external.populate(cache); }
@@ -956,13 +1437,13 @@ Whitelist these on Ghostery
 				GM_xmlhttpRequest({
 					method: 'GET',
 					url: uri,
-					onload: function (response) {
+					onload: function({responseText}) {
 						// console.log(response);
-						YTMA.external.parse(response.responseText, site, id);
+						YTMA.external.parse(responseText, site, id);
 					},
 					onerror: function () {
 						console.log('GM Cannot XHR');
-						YTMA.ajax.failure.call({ id: id });
+						YTMA.ajax.failure.call({ id });
 					}
 				});
 
@@ -974,12 +1455,12 @@ Whitelist these on Ghostery
 					this.xhr(uri, site, id);
 				} else {
 					console.log('No applicable CORS request available.');
-					this.failure.call({ id: id });
+					this.failure.call({ id });
 				}
 			}
 		},
 		xhr: function (uri, site, id) {
-			var x = new XMLHttpRequest();
+			const x = new XMLHttpRequest();
 			console.log('xhr', uri, id, site);
 
 			YTMA.ajax.preProcess(id);
@@ -990,10 +1471,10 @@ Whitelist these on Ghostery
 					if (this.status === 200) {
 						YTMA.external.parse(this.responseText, site, id);
 					} else if (this.status === 403) {
-						YTMA.external.populate({ site: site, id: id, title: 'Error 403', desc: '' });
-						YTMA.external.save({ site: site, id: id, title: 'Error 403', desc: '' });
+						YTMA.external.populate({ site, id, title: 'Error 403', desc: '' });
+						YTMA.external.save({ site, id, title: 'Error 403', desc: '' });
 					} else { // if (this.status >= 400 || this.status === 0) {
-						YTMA.ajax.failure.call({ id: id });
+						YTMA.ajax.failure.call({ id });
 					}
 				}
 			};
@@ -1004,20 +1485,20 @@ Whitelist these on Ghostery
 				x.send();
 			} catch (e) {
 				console.error('Cannot send xhr', uri);
-				YTMA.ajax.failure.call({ id: id });
+				YTMA.ajax.failure.call({ id });
 				console.error(e);
 			}
 		},
 		failure: function () {
-			$$.s('.ytm_bd._' + YTMA.escapeId(this.id), function (el) {
-				var a = el.querySelector('a');
+			$$.s(`.ytm_bd._${YTMA.escapeId(this.id)}`, el => {
+				const a = el.querySelector('a');
 				a.dataset.tries = a.dataset.tries ? parseFloat(a.dataset.tries) + 1 : 1;
-				a.textContent = 'Error, unable to load data. ' + (a.dataset.tries > 0 ? ('(' + a.dataset.tries + ')') : '[Retry]');
+				a.textContent = `Error, unable to load data. ${a.dataset.tries > 0 ? (`(${a.dataset.tries})`) : '[Retry]'}`;
 				a.className = 'ytm_error ytm_title';
 			});
 		},
 		preProcess: function (id) {
-			$$.s('.ytm_manual._' + YTMA.escapeId(id) + ' a', function (el) {
+			$$.s(`.ytm_manual._${YTMA.escapeId(id)} a`, el => {
 				el.classList.add('ytm_loading');
 				el.textContent = 'Loading data . . .';
 				el.title = 'Retry loading data.';
@@ -1037,13 +1518,13 @@ Whitelist these on Ghostery
 			}
 		},
 		parsers: {
-			soundcloud: function (j, id) {
+			soundcloud: function({title, description, thumbnail_url}, id) {
 				return {
 					site: 'soundcloud',
-					id: id, //unescape(j.html).match(/tracks\/(\d+)/)[1],
-					title: j.title,
-					desc: j.description,
-					th: removeSearch(j.thumbnail_url)
+					id, //unescape(j.html).match(/tracks\/(\d+)/)[1],
+					title,
+					desc: description,
+					th: removeSearch(thumbnail_url)
 				};
 			},
 			vimeo: function (j) {
@@ -1051,33 +1532,33 @@ Whitelist these on Ghostery
 				return {
 					site: 'vimeo',
 					id: j.id,
-					title: j.title + ' ' + YTMA.external.time.fromSeconds(j.duration),
+					title: `${j.title} ${YTMA.external.time.fromSeconds(j.duration)}`,
 					desc: j.description.replace(/<br.?.?>/g, ''),
 					th: decodeURI(j.thumbnail_medium)
 				};
 			},
 			youtube: function (j, id) {
 				if (j.pageInfo.totalResults < 1) {
-					return { id: id, error: true };
+					return { id, error: true };
 				}
 
 				j = j.items[0];
-				var o = {
+				const o = {
 					site: 'youtube',
-					id: id,
-					title: j.snippet.title + ' ' + YTMA.external.time.fromIso8601(j.contentDetails.duration),
+					id,
+					title: `${j.snippet.title} ${YTMA.external.time.fromIso8601(j.contentDetails.duration)}`,
 					desc: j.snippet.description
 					// aspectRatio: j.contentDetails.aspectRatio
 				};
 
 				return o;
 			},
-			vine: function (j, id) {
+			vine: function({title, thumbnail_url}, id) {
 				return {
 					site: 'vine',
-					id: id,
-					title: j.title,
-					th: removeSearch(j.thumbnail_url)
+					id,
+					title,
+					th: removeSearch(thumbnail_url)
 				};
 			},
 			gfycat: function (j, id) {
@@ -1090,11 +1571,11 @@ Whitelist these on Ghostery
 					};
 				}
 			},
-			streamable: function (j, id) {
+			streamable: function({title}, id) {
 				return {
 					site: 'streamable',
-					id: id,
-					title: j.title || 'Untitled'
+					id,
+					title: title || 'Untitled'
 				};
 			}
 		},
@@ -1105,21 +1586,22 @@ Whitelist these on Ghostery
 			this.db[data.site][data.id] = data;
 			return this.save();
 		},
-		unset: function (data) {
+		unset: function({site, id}) {
 			// console.log('unset', data.id);
-			if (data.site) {
-				delete this.db[data.site][data.id];
+			if (site) {
+				delete this.db[site][id];
 				return this.save();
 			}
 		},
 		limitDB: function (max, db) {
 			// limits an object's items by half of the max
 			// removes the older items at the start of the object
-			var keys = Object.keys(db),
-				half = Math.floor(max / 2),
-				start,
-				ndb,
-				i;
+			const keys = Object.keys(db);
+
+			const half = Math.floor(max / 2);
+			let start;
+			let ndb;
+			let i;
 
 			if (keys.length > max) {
 				ndb = {};
@@ -1140,18 +1622,18 @@ Whitelist these on Ghostery
 			cutDescription: function (data) {
 				if (data.desc && data.desc.length > 140) {
 					data.full = data.desc;
-					data.desc = data.desc.substr(0, 130) + ' . . .';
+					data.desc = `${data.desc.substr(0, 130)} . . .`;
 				}
 				return data;
 			},
-			thumbnail: function (data) {
-				$$.s('[data-ytmid="%id"].ytm_trigger'.replace('%id', data.id), function (el) {
-					el.setAttribute('style', 'background: url(' + data.th + ')');
+			thumbnail: function({id, th}) {
+				$$.s('[data-ytmid="%id"].ytm_trigger'.replace('%id', id), el => {
+					el.setAttribute('style', `background: url(${th})`);
 				});
 			},
 			titleToggle: function () {
 				this.classList.toggle('ytm_descr_open');
-				this.textContent = this.textContent.length < 140 ? this.dataset.full : this.dataset.full.substr(0, 130) + ' . . .';
+				this.textContent = this.textContent.length < 140 ? this.dataset.full : `${this.dataset.full.substr(0, 130)} . . .`;
 				this.removeAttribute('style');
 			}
 		},
@@ -1160,32 +1642,37 @@ Whitelist these on Ghostery
 				return i > 1 || v > 0;
 			},
 			leadingZero: function (v, i) {
-				return i > 0 ? ('00' + v).slice(-2) : v;
+				return i > 0 ? (`00${v}`).slice(-2) : v;
 			},
-			fromArray: function (a) { // [days, hours, mins, secs]
-				var b, p = '';
+			fromArray: function (a) {
+				// [days, hours, mins, secs]
+				let b;
+
+				let p = '';
 
 				try {
 					// Remove empty values, but keep lower indexes (m:s); a[i] > 0 || i > 1
 					// Add leading 0's, ignoring the first index
 					// a.slice(0, 1).concat(a.slice(1))
 					b = a.filter(this.keepMinutesAndSeconds).map(this.leadingZero);
-					p = '(' + b.join(':') + ')';
+					p = `(${b.join(':')})`;
 				} catch (e) {
 					console.error('Could not parse this time.');
 				}
 
-				console.log({ a: a, b: b, p: p });
+				console.log({ a, b, p });
 				return p;
 			},
-			fromIso8601: function (iso8601) { // eg PT3M, T29S
-				var a,
-					parseDigits = function (reg) {
-						if (reg.test(iso8601)) {
-							return RegExp.lastParen;
-						}
-						return 0;
-					};
+			fromIso8601: function (iso8601) {
+				// eg PT3M, T29S
+				let a;
+
+				const parseDigits = reg => {
+					if (reg.test(iso8601)) {
+						return RegExp.lastParen;
+					}
+					return 0;
+				};
 
 				// P#DT#H#M#S || PT#H#M#S
 				a = [/(\d+)D/, /(\d+)H/, /(\d+)M/, /(\d+)S/].map(parseDigits);
@@ -1193,7 +1680,7 @@ Whitelist these on Ghostery
 				return this.fromArray(a);
 			},
 			fromSeconds: function (seconds) {
-				var a = [
+				const a = [
 					Math.floor(seconds / 86400) % 24,
 					Math.floor(seconds / 3600) % 60,
 					Math.floor(seconds / 60) % 60,
@@ -1222,9 +1709,9 @@ Whitelist these on Ghostery
 
 			if (data.th) { this.helper.thumbnail(data); }
 
-			$$.s('.ytm_bd._' + YTMA.escapeId(data.id), function (el) {
-				var q;
-				el.innerHTML = '<span class="ytm_title">' + data.title + '</span>';
+			$$.s(`.ytm_bd._${YTMA.escapeId(data.id)}`, el => {
+				let q;
+				el.innerHTML = `<span class="ytm_title">${data.title}</span>`;
 				if (data.desc) {
 					q = $$.e('q', { className: 'ytm_descr ytm_block', textContent: data.desc }, el);
 					if (data.full) {
@@ -1259,29 +1746,24 @@ Whitelist these on Ghostery
 			}
 		},
 		extension: window.chrome && window.chrome.extension,
-		browser: {
-			pod: YTMA.reg.ios.test(navigator.userAgent),
-			ie: !!document.documentMode, // IE, basically | window.navigator.cpuClass
-			safari: Object.prototype.toString.call(window.HTMLElement).indexOf('Constructor') > 0
-		},
 		views: {
 			getAllSiteRegExps: function () {
-				var regs = [];
+				const regs = [];
 
-				$$.o(YTMA.DB.sites, function (k, site) {
-					if (site.reg) {
-						regs.push(site.reg);
+				$$.o(YTMA.DB.sites, (k, {reg}) => {
+					if (reg) {
+						regs.push(reg);
 					}
 				});
 
-				return new RegExp('\\b' + regs.join('|'));
+				return new RegExp(`\\b${regs.join('|')}`);
 			},
 			getAllSiteSelectors: function () {
-				var sels = [];
+				const sels = [];
 
-				$$.o(YTMA.DB.sites, function (k, site) {
-					if (site.selector) {
-						sels.push(site.selector);
+				$$.o(YTMA.DB.sites, (k, {selector}) => {
+					if (selector) {
+						sels.push(selector);
 					}
 				});
 
@@ -1290,17 +1772,8 @@ Whitelist these on Ghostery
 			getPlayerSources: function (siteName) {
 				return YTMA.DB.sources[siteName] || YTMA.DB.sources.iframe;
 			},
-			getToolbar: function (site) {
-				var bar = YTMA.DB.customToolbars[site] || {};
-
-				return {
-					ratio: bar.ratio === undefined ? true : bar.ratio,
-					size: bar.size === undefined ? true : bar.size
-				};
-			},
 			getPlayerDimmensions: function (ratio, size) {
-				return 'ytm_panel ytm_block ytm_panel-' + YTMA.DB.playerSize.ratios[ratio]
-					+ ' ytm_panel-' + YTMA.DB.playerSize.sizes[size];
+				return `ytm_panel ytm_block ytm_panel-${YTMA.DB.playerSize.ratios[ratio]} ytm_panel-${YTMA.DB.playerSize.sizes[size]}`;
 			},
 			getPlayerQuality: function (quality) {
 				return YTMA.DB.qualities[quality] || YTMA.DB.qualities[360];
@@ -1311,7 +1784,7 @@ Whitelist these on Ghostery
 				title: 'ytma!',
 				home: 'https://www.youtube.com/',
 				embed: 'https://www.youtube.com/embed/%key',
-				ajax: 'https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=%key' + window.atob('JmtleT1BSXphU3lEVG5INkxzRERyVElYaFZTZWRQQjlyRHo1czBSczQzZnM='),
+				ajax: `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=%key${window.atob('JmtleT1BSXphU3lEVG5INkxzRERyVElYaFZTZWRQQjlyRHo1czBSczQzZnM=')}`,
 				thumb: 'url(https://i3.ytimg.com/vi/%key/1.jpg)',
 				selector: 'a[href*="youtube."], a[href*="youtu.be/"]',
 				favicon: 'https://www.youtube.com/favicon.ico',
@@ -1418,48 +1891,45 @@ Whitelist these on Ghostery
 		},
 		sources: {
 			iframe: function (data) {
-				var key = YTMA.DB.sites[data.site].key;
+				const key = YTMA.DB.sites[data.site].key;
 
 				return [
 					{ type: 'text/html', src: YTMA.DB.sites[data.site].embed.replace('%key', data[key]) }
 				];
 			},
-			'html5-audio': function (data) {
+			'html5-audio': function({uri}) {
 				return [
-					{ type: 'audio/mp3', src: data.uri }
+					{ type: 'audio/mp3', src: uri }
 				];
 			},
-			html5: function (data) {
+			html5: function({uri}) {
 				// attaching the type as either mp4 or webm
 
-				if (/(?:webm)/.test(data.uri)) {
+				if (/(?:webm)/.test(uri)) {
 					return [
-						{ type: 'video/webm', src: data.uri }
+						{ type: 'video/webm', src: uri }
 					];
 				}
 
 				return [
-					{ type: 'video/mp4', src: data.uri },
-					{ type: 'video/webm', src: data.uri },
-					{ type: 'video/ogg; codecs="theora, vorbis"', src: data.uri }
+					{ type: 'video/mp4', src: uri },
+					{ type: 'video/webm', src: uri },
+					{ type: 'video/ogg; codecs="theora, vorbis"', src: uri }
 				];
 			},
-			imgur: function (data) {
-				var src = YTMA.DB.sites.imgur.embed.replace('%key', data.id);
+			imgur: function({id}) {
+				const src = YTMA.DB.sites.imgur.embed.replace('%key', id);
 
 				return [
-					{ type: 'video/webm', src: src + '.webm' },
-					{ type: 'video/mp4', src: src + '.mp4' }
+					{ type: 'video/webm', src: `${src}.webm` },
+					{ type: 'video/mp4', src: `${src}.mp4` }
 				];
 			},
-			youtube: function (data, attrs) {
-				var params = '?html5=1&version=3&modestbranding=1&rel=0&showinfo=1&vq=' + attrs.quality
-					+ '&iv_load_policy=' + YTMA.user.preferences.yt_annotation
-					+ '&start=' + attrs.start
-					+ '&rel=0';// + YTMA.user.preferences.yt_volume;
+			youtube: function({id}, {quality, start}) {
+				const params = `?html5=1&version=3&modestbranding=1&rel=0&showinfo=1&vq=${quality}&iv_load_policy=${YTMA.user.preferences.yt_annotation}&start=${start}&rel=0`;// + YTMA.user.preferences.yt_volume;
 
 				return [
-					{ type: 'text/html', src: YTMA.DB.sites.youtube.embed.replace('%key', data.id) + params }
+					{ type: 'text/html', src: YTMA.DB.sites.youtube.embed.replace('%key', id) + params }
 				];
 			}
 		},
@@ -1500,434 +1970,19 @@ Whitelist these on Ghostery
 			1080: 'hd1080',
 			1081: 'highres'
 		}
-		// videoTypes: (function () {
-		// 	var v = document.createElement('video');
-
-		// 	return {
-		// 		ogg: !!v.canPlayType('video/ogg; codecs="theora, vorbis"'),
-		// 		webm: !!v.canPlayType('video/webm'),
-		// 		mp4: !!v.canPlayType('video/mp4')
-		// 	};
-		// }()),
-	};
-
-	/** U I CLASS
-	 * Class for the player controls
-	 */
-	YTMA.UI = function (ytma) {
-		this.ytmx = ytma;
-
-		this.play = new YTMA.Player(this.ytmx);
-		this.open = false;
-		this.selected = { size: null, ratio: null };
-
-		this.trigger = ytma.spn;
-		this.projector = $$.e('div', { className: 'ytm_projector ytm_none ytm_block ytm_normalize ytm_sans' });
-		this.control = $$.e('ul', { className: 'ytm_control ytm_sans' });
-		this.customBar = YTMA.DB.views.getToolbar(this.ytmx.data.site);
-		this.controlBar();
-	};
-
-	YTMA.UI.ratios = {
-		SD: 1,
-		HD: 2,
-		PORTRAIT: 3
-	};
-
-	YTMA.UI.sizes = {
-		HIDDEN: 0,
-		S: 240,
-		M: 360,
-		L: 480,
-		X: 720
-	};
-
-	/** Trigger is the VAR element */
-	YTMA.UI.createFromTrigger = function (t) {
-		console.log('createFromTrigger');
-		if (t.hasAttribute('data-ytmuid') && !YTMA.set[t.dataset.ytmuid]) {
-			console.log('createFromTrigger-new');
-			YTMA.addToSet(new YTMA()._reactivate(t));
-		}
-		console.log('createFromTrigger-ui');
-		return YTMA.set[t.dataset.ytmuid].getUI();
-	};
-
-	YTMA.UI.events = {
-		$fire: {
-			settings: function () {
-				YTMA.user.events.formToggle();
-			},
-			close: function () {
-				if (YTMA.DB.sites[this.ytmx.data.site].scroll) {
-					console.log('events.close-1');
-					this.hideAllPlayers();
-				} else {
-					console.log('events.close-2');
-					this.ytmx.disableOpenOnScroll();
-					this.hidePlayer();
-				}
-			},
-			ratio: function (li) {
-				var n = parseInt(li.dataset.value, 10);
-				this.play.dimmensions(n);
-				this.markSelected(li, 'ratio');
-			},
-			size: function (li) {
-				var n = parseInt(li.dataset.value, 10);
-				this.play.dimmensions(null, n);
-				this.markSelected(li, 'size');
-			}
-		},
-		videoBar: function (e) {
-			var el = e.target, t;
-
-			if (el.tagName.toLowerCase() === 'li' && el.dataset && el.dataset.type) {
-				t = el.dataset.type;
-				if (YTMA.UI.events.$fire[t]) {
-					YTMA.UI.events.$fire[t].call(this, el);
-				}
-			}
-		}
-	};
-
-	YTMA.UI.prototype = {
-		constructor: YTMA.UI,
-		resetViewSize: function () {
-			this.play.dimmensions();
-			this.setControlBarSize(this.play.attrs.size);
-		},
-		showOnScroll: function (el) {
-			if (!this.open && this.ytmx.canScroll() && this.ytmx.isBelow(el)) {
-				this.showPlayer();
-			}
-		},
-		showPlayer: function () {
-			this.open = true;
-
-			this.trigger.classList.add('ytm_none');
-			this.projector.classList.remove('ytm_none');
-
-			this.attachPlayPanel();
-			this.play.switchOn();
-
-			if (YTMA.user.preferences.focus) {
-				document.location.hash = '#' + this.ytmx.container.id;
-			}
-		},
-		hidePlayer: function () {
-			this.open = false;
-
-			this.play.switchOff();
-			this.trigger.classList.remove('ytm_none');
-			this.projector.classList.add('ytm_none');
-		},
-		attachPlayPanel: function () {
-			if (!this.play.panel.parentNode) {
-				// console.log('attaching display panel');
-				this.projector.appendChild(this.play.panel);
-			}
-		},
-		hideAllPlayers: function () {
-			var group = YTMA.collect(this.ytmx.data.id);
-			console.log('closing all', this.ytmx.data.id, group.length);
-			group.forEach(function (y) {
-				y.disableOpenOnScroll();
-				y.getUI().hidePlayer();
-			});
-		},
-		setControlBarSize: function (size) {
-			this.markSelected(this.control.querySelector('li[data-value="' + size + '"]'), 'size');
-		},
-		controlBar: function () {
-			var f = document.createDocumentFragment();
-
-			$$.a(f,
-				this.customBar.ratio ? this.buildList('ytm_ratios', [
-					{ type: 'ratio', text: '4:3', value: YTMA.UI.ratios.SD, title: 'SD' },
-					{ type: 'ratio', text: '16:9', value: YTMA.UI.ratios.HD, title: 'Landscape' },
-					{ type: 'ratio', text: '9:16', value: YTMA.UI.ratios.PORTRAIT, title: 'Portrait' }]) : null,
-				this.customBar.size ? this.buildList('ytm_sizes', [
-					{ type: 'size', text: '\u00D8', value: YTMA.UI.sizes.HIDDEN, title: 'Hide the video.' },
-					{ type: 'size', text: 'S', value: YTMA.UI.sizes.S, title: '240p' },
-					{ type: 'size', text: 'M', value: YTMA.UI.sizes.M, title: '360p' },
-					{ type: 'size', text: 'L', value: YTMA.UI.sizes.L, title: '480p' },
-					{ type: 'size', text: 'X', value: YTMA.UI.sizes.X, title: '720p' }]) : null,
-				this.buildList('ytm_options', [
-					strg.on ? { type: 'settings', text: '!', title: 'YTMA Settings' } : null,
-					{ type: 'close', text: '\u00D7', title: 'Close the video.' }])
-			);
-
-			this.control.appendChild(f);
-			this.control.addEventListener('click', YTMA.UI.events.videoBar.bind(this), false);
-			this.projector.appendChild(this.control);
-			this.ytmx.container.insertBefore(this.projector, this.trigger.nextSibling);
-		},
-		markSelected: function (el, type) {
-			el.id = type + this.ytmx.data.uid;
-			try {
-				this.selected[type].removeAttribute('id');
-			} catch (e) { }
-			this.selected[type] = el;
-		},
-		buildList: function (className, elements) {
-			var li = $$.e('li'),
-				ul = $$.e('ul', { className: className }, li),
-				f = document.createDocumentFragment(),
-				i,
-				e;
-
-			for (i = 0; i < elements.length; i++) {
-				e = elements[i];
-				if (e) {
-					f.appendChild(this.li(e.type, e.text, e.value, e.title));
-				}
-			}
-			ul.appendChild(f);
-			return li;
-		},
-		li: function (type, txt, value, title) {
-			var l = $$.e('li', { _type: type, textContent: txt, _value: value, title: title });
-			if ((type === 'size' && this.play.attrs.size === value) || (type === 'ratio' && this.play.attrs.ratio === value)) {
-				this.markSelected(l, type);
-			}
-			return l;
-		}
-	};
-
-	/** P L A Y E R CLASS
-	 *  @param parent YTMA instance
-	 */
-	YTMA.Player = function (parent) {
-		this.parent = parent;
-
-		this.mode = 'off';
-
-		this.attrs = {
-			sources: null,
-			quality: YTMA.DB.views.getPlayerQuality(YTMA.user.preferences.quality),
-			size: null,
-			ratio: null,
-			start: this.time(),
-			type: null
-		};
-
-		this.attrs.sources = YTMA.DB.views.getPlayerSources(parent.data.site)(parent.data, this.attrs);
-
-		// todo improve type/media
-		this.attrs.type = this.findType();
-		this.media = YTMA.Player.makeMedia[this.attrs.type](this);
-
-		this.channel = $$.e('div', { className: 'ytm_panel_channel ytm_block' }, this.media, true);
-		this.switcher = $$.e('div', { className: 'ytm_panel_switcher ytm_panel_size ytm_block ytm_' + this.attrs.type, _ytmuid: this.parent.data.uid, _standby: true });
-		this.panel = $$.e('div', { className: 'ytm_panel ytm_block' }, this.switcher, true);
-
-		if (parent.data.site === 'soundcloud' && YTMA.reg.extra.soundcloud.playlist.test(parent.anchor.href)) {
-			this.media.classList.add('ytm_soundcloud-playlist');
-			this.switcher.classList.add('ytm_soundcloud-playlist');
-		}
-
-		this.dimmensions(YTMA.user.preferences.ratio, YTMA.user.preferences.size);
-	};
-
-	YTMA.Player.css = {
-		item: function (key, value) {
-			if (isNumber(value)) {
-				value += 'px';
-			}
-
-			return '\t' + key + ': ' + value + ';\n';
-		},
-		iter: function (css, cssEntries) {
-			$$.o(cssEntries, function (key, value) {
-				css.push(YTMA.Player.css.item(key, value));
-			});
-			css.push('}');
-		},
-		generator: function () {
-			var css = [];
-
-			$$.o(this.sizes, function (size, sizes) {
-				$$.o(sizes, function (dimm, keys) {
-					css.push('\n.ytm_panel-' + size + '.ytm_panel-' + dimm + ' .ytm_panel_size {\n');
-					YTMA.Player.css.iter(css, keys);
-				});
-			});
-
-			// add site overrides
-			$$.o(this.sites, function (site, data) {
-				$$.o(data, function (setting, keys) {
-					if (setting === 'all') {
-						css.push('\n.ytm_site_' + site + ' .ytm_panel_size {\n');
-					} else {
-						css.push('\n.ytm_site_' + site + ' .ytm_panel-' + setting + ' .ytm_panel_size {\n');
-					}
-					YTMA.Player.css.iter(css, keys);
-				});
-			});
-
-			return css.join('');
-		},
-		sizes: (function () {
-			var merge = {};
-
-			$$.o(YTMA.DB.playerSize.sizes, function (num, size) {
-				if (num >= 0) {
-					merge[size] = {};
-
-					$$.o(YTMA.DB.playerSize.ratios, function (k, ratio) {
-						if (ratio === 'pr') {
-							var w = Math.floor(num * 0.95); // smaller than the normal sizes
-							merge[size][ratio] = {
-								width: w,
-								height: Math.floor(w * YTMA.DB.playerSize.aspects[k])
-							};
-						} else {
-							merge[size][ratio] = {
-								width: Math.floor(num * YTMA.DB.playerSize.aspects[k]),
-								height: num
-							};
-						}
-					});
-				}
-			});
-
-			return merge;
-		}()),
-		sites: { // custom sizes per site
-			soundcloud: {
-				all: {
-					height: '118px !important'
-				}
-			},
-			vine: {
-				s: {
-					width: 240,
-					height: 240
-				},
-				m: {
-					width: 360,
-					height: 360
-				},
-				l: {
-					width: 480,
-					height: 480
-				},
-				xl: {
-					width: 720,
-					height: 720
-				}
-			}
-		}
-	};
-
-	YTMA.Player.makeMedia = {
-		$css: function (type) {
-			return 'ytm_panel_media ytm_panel_size ytm_block ytm_' + type;
-		},
-		video: function (player) {
-			var video = $$.e('video', {
-				controls: true,
-				autoplay: false,
-				loop: true,
-				className: this.$css('video'),
-				$allowscriptaccess: true,
-				preload: 'metadata'
-			}), links = [];
-
-			player.attrs.sources.forEach(function (source) {
-				$$.e('source', { src: source.src, $type: source.type }, video);
-
-				links.push('<a href="' + source.src + '">' + source.src + '</a>');
-			});
-
-			$$.e('p', { innerHTML: 'Could not load source(s): ' + links.join('<br />') }, video);
-
-			return video;
-		},
-		iframe: function (player) {
-			return $$.e('iframe', {
-				$allowfullscreen: true,
-				$referrerpolicy: 'no-referrer',
-				// $sandbox: 'allow-same-origin allow-scripts allow-popups',
-				$type: player.attrs.sources[0].type,
-				src: player.attrs.sources[0].src,
-				className: this.$css('iframe')
-			});
-		},
-		audio: function (player) {
-			return $$.e('audio', {
-				src: player.attrs.sources[0].src,
-				$type: player.attrs.sources[0].type
-			});
-		}
-	};
-
-	YTMA.Player.prototype = {
-		constructor: YTMA.Player,
-		dimmensions: function (ratio, size) {
-			this.attrs.ratio = isNumber(ratio) ? ratio : this.attrs.ratio;
-			this.attrs.size = isNumber(size) ? size : this.attrs.size;
-			this.panel.className = YTMA.DB.views.getPlayerDimmensions(this.attrs.ratio, this.attrs.size);
-		},
-		time: function () {
-			try {
-				var m = this.parent.data.uri.match(YTMA.reg.time).slice(1, 3);
-				return ((+m[0] || 0) * 60 * 60) + ((+m[1] || 0) * 60) + (+m[2] || 0);
-			} catch (e) { return 0; }
-		},
-		findType: function () {
-			if (this.parent.data.site === 'html5-audio') { return 'audio'; }
-			if (YTMA.DB.sites[this.parent.data.site].videoTag) { return 'video'; }
-			return 'iframe';
-		},
-		switchOff: function () {
-			// console.log('removed media');
-
-			if (this.media.pause) {
-				console.log('pausing');
-				this.media.pause();
-			}
-
-			try {
-				this.switcher.removeChild(this.channel);
-			} catch (e) {
-				// console.error(e);
-			}
-			this.mode = 'off';
-		},
-		switchOn: function () {
-			if (this.attrs.size === 0) {
-				this.attrs.size = YTMA.user.preferences.size;
-				this.parent.ui.resetViewSize();
-			}
-			// console.log('switch to media');
-			this.switcher.appendChild(this.channel);
-			this.switcher.dataset.standby = false;
-			this.mode = 'on';
-		},
-		switchStandby: function () {
-			// console.log('switch to standby');
-			this.switchOff();
-			this.switcher.dataset.standby = true;
-			this.mode = 'standby';
-		},
-		isStandby: function () {
-			return this.mode === 'standby';
-		}
 	};
 
 	YTMA.prototype = {
 		constructor: YTMA,
-		getUI: function () {
-			if (!this.ui) {
-				this.ui = new YTMA.UI(this);
+		getControl: function () {
+			if (!this.control) {
+				this.control = new Control(this);
 			}
 
-			return this.ui;
+			return this.control;
 		},
 		setup: function () {
-			var site = YTMA.DB.sites[this.data.site];
+			const site = YTMA.DB.sites[this.data.site];
 
 			if (site) {
 				this.spn.title = site.title || 'ytma!';
@@ -1957,6 +2012,7 @@ Whitelist these on Ghostery
 		isBelow: function (link) {
 			return YTMA.Scroll.compare(this.anchor, link) < 1;
 		},
+		canShowUnder: el => this.canScroll() && this.isBelow(el),
 		dom: {
 			custom: { // modifies interface according to site
 				youtube: function () {
@@ -1967,7 +2023,7 @@ Whitelist these on Ghostery
 			},
 			link: function () {
 				if (this.anchor.getElementsByTagName('img').length === 0) {
-					this.anchor.className += ' ytm_link ytm_link_' + this.data.site + ' ';
+					this.anchor.className += ` ytm_link ytm_link_${this.data.site} `;
 				}
 				this.anchor.dataset.ytmid = this.data.id;
 				this.anchor.dataset.ytmuid = this.data.uid;
@@ -1976,8 +2032,8 @@ Whitelist these on Ghostery
 				this.anchor.parentNode.insertBefore(this.container, this.anchor.nextSibling);
 			},
 			span: function () {
-				var f = document.createDocumentFragment(),
-					site = YTMA.DB.sites[this.data.site];
+				const f = document.createDocumentFragment();
+				const site = YTMA.DB.sites[this.data.site];
 
 				$$.e('span', { className: 'ytm_init ytm_label ytm_sans ytm_box', textContent: this.spn.title }, this.spn);
 				$$.e('var', { className: 'ytm_label ytm_box', _ytmid: this.data.id, _ytmuid: this.data.uid, _ytmsid: this.data.sid, _ytmsite: this.data.site, textContent: '\u25B6' }, this.spn);
@@ -1992,9 +2048,8 @@ Whitelist these on Ghostery
 				this.container.appendChild(f);
 			},
 			dataLoadLink: function () {
-				var a, s;
-				s = $$.e('span', { className: 'ytm_bd ytm_normalize ytm_manual _' + this.data.sid });
-				a = $$.e('a', {
+				const s = $$.e('span', { className: `ytm_bd ytm_normalize ytm_manual _${this.data.sid}` });
+				const a = $$.e('a', {
 					className: 'ytm_title',
 					textContent: 'Load description.',
 					href: '#',
@@ -2009,83 +2064,38 @@ Whitelist these on Ghostery
 		}
 	};
 
-	/**
-	 *  Creates a new YTMA from the given attributes
-	 *  @String|Number id Unique ID
-	 *  @String site Website eg: youtube, vimeo
-	 *  @HTMLAnchorElement a Anchor element
-	 */
-	YTMA.prototype._new = function (id, site, a) {
-		var uid = YTMA.escapeId(id + '_' + (YTMA.num += 1));
-
-		this.data = {
-			id: id,
-			uid: YTMA.escapeId(uid), // unique id
-			sid: YTMA.escapeId(id), // shared id
-			site: site,
-			uri: a.href
-		};
-
-		this.ui = null;
-
-		if (!a.hasAttribute('data-ytmscroll')) { a.dataset.ytmscroll = true; }
-
-		this.anchor = a;
-
-		this.spn = $$.e('span', { className: 'ytm_trigger ytm_block ytm_normalize ytm_sans', _ytmid: this.data.id, _ytmsite: this.data.site });
-		this.container = $$.e('div', { id: 'w' + this.data.uid, className: 'ytm_spacer ytm_block ytm_site_' + this.data.site });
-
-		return this;
-	};
-
-	/**
-	 *  Recreates a YTMA object from a trigger element
-	 *  @HTMLElement
-	 */
-	YTMA.prototype._reactivate = function (trigger) {
-		var id = trigger.dataset.ytmid,
-			a = document.querySelector('a[data-ytmuid="' + trigger.dataset.ytmuid + '"]');
-
-		this.data = {
-			id: id,
-			uid: trigger.dataset.ytmuid,
-			sid: trigger.dataset.ytmsid,
-			site: trigger.dataset.ytmsite,
-			uri: a.href
-		};
-
-		this.ui = null;
-		this.anchor = a;
-		this.spn = trigger.parentElement;
-		this.container = this.spn.parentElement;
-
-		return this;
-	};
-
 	/** S C R O L L CLASS
 	 * Window-Scroll Event Helper
 	 */
-	YTMA.Scroll = (function () {
+	YTMA.Scroll = (() => {
+		class Scroll {
+			constructor(selector, cb, delay) {
+				this.selector = selector;
+				this.cb = cb;
 
-		function Scroll(selector, cb, delay) {
-			this.selector = selector;
-			this.cb = cb;
+				// console.log('YTMA.Scroll Monitor: ', selector);
+				this.bound = Scroll.debounce(this.monitor.bind(this), delay || 500);
 
-			// console.log('YTMA.Scroll Monitor: ', selector);
-			this.bound = Scroll.debounce(this.monitor.bind(this), delay || 500);
+				this.bound();
+				window.addEventListener('scroll', this.bound, false);
+			}
 
-			this.bound();
-			window.addEventListener('scroll', this.bound, false);
+			stop() {
+				// console.log('clear scroll: ', this.selector);
+				window.removeEventListener('scroll', this.bound);
+			}
+
+			monitor() {
+				$$.s(this.selector, this.cb);
+			}
 		}
 
-		Scroll.debounce = function (fn, delay) {
-			var timeout;
-			delay = delay || 250;
+		Scroll.debounce = (fn, delay = 250) => {
+			let timeout;
 
-			return function () {
-				var self = this, args = arguments, timed;
-
-				timed = function () {
+			return function (...args) {
+				const self = this;
+				const timed = () => {
 					timeout = null;
 					fn.apply(self, args);
 				};
@@ -2095,43 +2105,31 @@ Whitelist these on Ghostery
 			};
 		};
 
-		Scroll.visible = function (el) {
-			var bound = el.getBoundingClientRect();
+		Scroll.visible = el => {
+			const bound = el.getBoundingClientRect();
 			return (bound.top >= 0 && bound.top <= document.documentElement.clientHeight);
 		};
 
-		Scroll.visibleAll = function (el, offset) {
-			var bound = el.getBoundingClientRect(),
-				height = document.documentElement.clientHeight;
+		Scroll.visibleAll = (el, offset) => {
+			const bound = el.getBoundingClientRect();
+			const height = document.documentElement.clientHeight;
 			offset = isNumber(offset) ? +offset : 0;
 			return ((bound.bottom + offset >= 0)
 				&& (bound.top <= height + offset || bound.bottom <= height - offset));
 		};
 
 		/** Returns 1, 0, -1 when el1 is above, exactly the same, or below el2 */
-		Scroll.compare = function (el1, el2) {
-			var a = el1.getBoundingClientRect().y,
-				b = el2.getBoundingClientRect().y;
+		Scroll.compare = (el1, el2) => {
+			const a = el1.getBoundingClientRect().y;
+			const b = el2.getBoundingClientRect().y;
 
 			if (a < b) { return 1; }
 			if (a === b) { return 0; }
 			return -1;
 		};
 
-		Scroll.prototype = {
-			stop: function () {
-				// console.log('clear scroll: ', this.selector);
-				window.removeEventListener('scroll', this.bound);
-			},
-			monitor: function () {
-				$$.s(this.selector, this.cb);
-			}
-		};
-
 		return Scroll;
-
-	}());
+	})();
 
 	YTMA.main();
-
-}());
+})();
