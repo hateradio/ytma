@@ -197,14 +197,6 @@ Whitelist these on Ghostery
 		o: function (object, cb) {
 			Object.keys(object).some(key => cb(key, object[key], object) === false);
 		},
-		a: function (parent, ...children) {
-			const child = children.reduce((fragment, el) => {
-				if (el) fragment.appendChild(el);
-				return fragment;
-			}, document.createDocumentFragment());
-			parent.appendChild(child);
-			return parent;
-		},
 		e: function (t, o, e, p) {
 			const c = document.createElement(t);
 			$$.o(o, (k, v) => {
@@ -357,6 +349,61 @@ Whitelist these on Ghostery
 	};
 	update.check();
 
+	class Container {
+
+		constructor({site, data, sibling}) {
+			const { ajax, slim } = site;
+
+			this.body = $$.e('div', {
+				id: `w${data.uid}`,
+				className: `ytm_spacer ytm_block ytm_site_${data.site}`,
+				innerHTML: this.createThumbnail({site, data})
+			});
+
+			this.thumbnail = this.body.firstElementChild;
+
+			if (ajax) { this.body.insertAdjacentHTML('beforeend', this.createAjaxLink(data)); }
+			if (slim) { this.body.classList.add('ytm_site_slim'); }
+
+			sibling.parentElement.insertBefore(this.body, sibling.nextElementSibling);
+		}
+
+		createThumbnail({site, data}) {
+			const {title, thumb = ''} = site;
+			const {id, uid, sid} = data;
+
+			const thumbTemplate = `
+				<span class="ytm_trigger ytm_block ytm_normalize ytm_sans"
+					title="${title}"
+					data-ytmid="${id}"
+					data-ytmsite="${id}"
+					style="background-image('${thumb.replace('%key', id)}')">
+					<span class="ytm_init ytm_label ytm_sans ytm_box">${title}</span>
+						<var class="ytm_label ytm_box"
+							data-ytmid="${id}"
+							data-ytmuid="${uid}"
+							data-ytmsid="${sid}"
+							data-ytmsite="${data.site}">\u25B6</var>
+					</span>
+				</span>`;
+			return thumbTemplate;
+		}
+
+		createAjaxLink(data) {
+			const { sid, id, site, uri } = data;
+			const template = `
+				<span class="ytm_bd ytm_normalize ytm_manual _${sid}">
+					<a href="#" class="ytm_title" title="Load this video's description."
+						data-ytmid="${id}"
+						data-ytmsite="${site}"
+						data-ytmuri="${uri}"
+						data-ytmdescription="true"
+					>Load Description</a>
+				</span>`;
+			return template;
+		}
+	}
+
 	/** Y T M A CLASS
 	 *  Bare YTMA class, filled through constructor() or _reactivate()
 	 */
@@ -404,8 +451,10 @@ Whitelist these on Ghostery
 
 			this.control = null;
 			this.anchor = a;
-			this.spn = parentElement;
-			this.container = this.spn.parentElement;
+			this.container = {
+				thumbnail: parentElement,
+				body: parentElement.parentElement
+			};
 
 			return this;
 		}
@@ -418,51 +467,14 @@ Whitelist these on Ghostery
 			return this.control;
 		}
 
-		fillContainer(site) {
-			const { title = 'ytma!', thumb, ajax, slim, scroll } = site;
-
-			this.container = $$.e('div', {
-				id: `w${this.data.uid}`,
-				className: `ytm_spacer ytm_block ytm_site_${this.data.site}`
-			});
-
-			this.spn = $$.e('span', {
-				className: 'ytm_trigger ytm_block ytm_normalize ytm_sans',
-				title,
-				_ytmid: this.data.id,
-				_ytmsite: this.data.site,
-				innerHTML: `
-					<span class="ytm_init ytm_label ytm_sans ytm_box">${title}</span>
-						<var class="ytm_label ytm_box"
-							data-ytmid="${this.data.id}"
-							data-ytmuid="${this.data.uid}"
-							data-ytmsid="${this.data.sid}"
-							data-ytmsite="${this.data.site}">\u25B6</var>
-					</span>`
-			}, this.container);
-
-			if (thumb) {
-				this.spn.style.backgroundImage = thumb.replace('%key', this.data.id);
-			}
-
-			if (ajax) { this.insertLoadLink(); }
-			if (slim) { this.container.classList.add('ytm_site_slim'); }
-			if (scroll) { this.anchor.classList.add('ytm_scroll'); }
-		}
-
 		setup() {
 			const site = YTMA.DB.sites[this.data.site];
-			this.fillContainer(site);
 
-			if (site.https) {
-				this.anchor.href = this.anchor.href.replace('http:', 'https:');
-			}
-
+			this.container = new Container({site, data: this.data, sibling: this.anchor});
+			this.link(site);
 			try {
-				this.custom[this.data.site].call(this);
+				YTMA.Decorator[this.data.site](this);
 			} catch (e) { }
-
-			this.link();
 		}
 
 		disableOpenOnScroll() {
@@ -477,11 +489,13 @@ Whitelist these on Ghostery
 			return YTMA.Scroll.compare(this.anchor, link) < 1;
 		}
 
-		canShowUnder(el) {
-			this.canScroll() && this.isBelow(el);
+		canShowUnder(link) {
+			this.canScroll() && this.isBelow(link);
 		}
 
-		link() {
+		link(site) {
+			if (site.scroll) { this.anchor.classList.add('ytm_scroll'); }
+			if (site.https) { this.anchor.href = this.anchor.href.replace('http:', 'https:'); }
 			if (this.anchor.getElementsByTagName('img').length === 0) {
 				this.anchor.className += ` ytm_link ytm_link_${this.data.site} `;
 			}
@@ -489,35 +503,17 @@ Whitelist these on Ghostery
 			this.anchor.dataset.ytmuid = this.data.uid;
 			this.anchor.dataset.ytmsid = this.data.sid;
 			this.anchor.title = 'Visit the video page.';
-			this.anchor.parentElement.insertBefore(this.container, this.anchor.nextElementSibling);
-		}
-
-		insertLoadLink() {
-			const { sid, id, site, uri } = this.data;
-			const template = `
-				<span class="ytm_bd ytm_normalize ytm_manual _${sid}">
-					<a href="#" class="ytm_title" title="Load this video's description."
-						data-ytmid="${id}"
-						data-ytmsite="${site}"
-						data-ytmuri="${uri}"
-						data-ytmdescription="true"
-					>Load Description</a>
-				</span>`;
-
-			this.container.insertAdjacentHTML('beforeend', template);
-		}
-
-		get custom() { // modifies interface according to site
-			return {
-				youtube: function () {
-					this.spn.addEventListener('mouseenter', YTMA.events.thumb.start, false);
-					this.spn.addEventListener('mouseleave', YTMA.events.thumb.stop, false);
-					this.anchor.href = this.anchor.href.replace('youtu.be/', 'youtube.com/watch?v=');
-				}
-			};
 		}
 
 	}
+
+	YTMA.Decorator = { // modifies interface according to site
+		youtube: function (base) {
+			base.container.thumbnail.addEventListener('mouseenter', YTMA.events.thumb.start, false);
+			base.container.thumbnail.addEventListener('mouseleave', YTMA.events.thumb.stop, false);
+			base.anchor.href = this.anchor.href.replace('youtu.be/', 'youtube.com/watch?v=');
+		}
+	};
 
 	YTMA.events = {
 		clicks: function (e) { // YTMA global click dispatcher
@@ -1666,7 +1662,7 @@ Whitelist these on Ghostery
 			this.open = false;
 			this.selected = { size: null, ratio: null };
 
-			this.trigger = ytma.spn;
+			this.trigger = ytma.container.thumbnail;
 			this.projector = $$.e('div', { className: 'ytm_projector ytm_none ytm_block ytm_normalize ytm_sans' });
 			this.options = $$.e('ul', { className: 'ytm_options ytm_sans' });
 			this.controlBarView();
@@ -1677,8 +1673,8 @@ Whitelist these on Ghostery
 			this.setControlBarSize(this.play.attrs.size);
 		}
 
-		showOnScroll(el) {
-			if (!this.open && this.ytmx.canShowUnder(el)) {
+		showOnScroll(link) {
+			if (!this.open && this.ytmx.canShowUnder(link)) {
 				this.showPlayer();
 			}
 		}
@@ -1693,7 +1689,7 @@ Whitelist these on Ghostery
 			this.play.switchOn();
 
 			if (YTMA.user.preferences.focus) {
-				document.location.hash = `#${this.ytmx.container.id}`;
+				document.location.hash = `#${this.ytmx.container.body.id}`;
 			}
 		}
 
@@ -1732,7 +1728,7 @@ Whitelist these on Ghostery
 
 			this.markSelected(this.options.querySelector(`li[data-type="size"][data-value="${this.play.attrs.size}"]`), 'size');
 			this.markSelected(this.options.querySelector(`li[data-type="ratio"][data-value="${this.play.attrs.ratio}"]`), 'ratio');
-			this.ytmx.container.insertBefore(this.projector, this.trigger.nextElementSibling);
+			this.ytmx.container.body.insertBefore(this.projector, this.trigger.nextElementSibling);
 		}
 
 		markSelected(el, type) {
