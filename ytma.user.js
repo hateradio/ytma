@@ -154,10 +154,6 @@ Whitelist these on Ghostery
 
 
 (() => {
-	let $$;
-	let strg;
-	let update;
-
 	const isNumber = n => !isNaN(parseFloat(n)) && isFinite(n);
 
 	const removeSearch = (uri, keepHash) => {
@@ -189,10 +185,10 @@ Whitelist these on Ghostery
 		};
 	}
 
-	// D O M Handle
-	$$ = {
+	// H E L P E R Handle
+	const _ = {
 		s: (selector, cb) => {
-			const elements = $$.x(selector);
+			const elements = _.x(selector);
 			elements.some((element, index) => cb(element, index, elements) === false);
 		},
 		o: function (object, cb) {
@@ -200,7 +196,7 @@ Whitelist these on Ghostery
 		},
 		e: function (t, o, e, p) {
 			const c = document.createElement(t);
-			$$.o(o, (k, v) => {
+			_.o(o, (k, v) => {
 				const b = k.charAt(0);
 				if (b === '_')
 					c.dataset[k.substring(1)] = v;
@@ -218,7 +214,6 @@ Whitelist these on Ghostery
 			return c;
 		},
 		x: selector => Array.from(document.querySelectorAll(selector)),
-		top: document.head || document.body,
 		css: function (text) {
 			if (!this.style) {
 				this.style = document.createElement('style');
@@ -227,22 +222,47 @@ Whitelist these on Ghostery
 			}
 			this.style.appendChild(document.createTextNode(`${text}\n`));
 		},
-		js: function (t) {
+		js: t => {
 			const j = document.createElement('script');
 			j.type = 'text/javascript';
 			j[/^https?:\/\//i.test(t) ? 'src' : 'textContent'] = t;
-			this.top.appendChild(j);
+			document.head.appendChild(j);
 		},
-		on: (element, type, selector, listener) => {
-			element.addEventListener(type, event => {
+		/**
+		 * @param {HTMLElement} element HTML element
+		 * @param {string} types Space- or coma-separated string of one or more types, eg "click dblclick"
+		 * @param {string} selector CSS selector for the elements to trigger the event on
+		 * @param {Function} listener A callback
+		 */
+		on: (element, types, selector, listener) => {
+			types = types.split(/(?:\s+|,)/).filter(f => f);
+
+			if (types.length === 0) return;
+
+			const fn = event => {
 				const found = event.target.closest(selector);
 				if (found) listener.call(found, event);
-			}, false);
+			};
+
+			types.forEach(type => element.addEventListener(type, fn, false));
+		},
+		debounce: (fn, delay = 250) => {
+			let timeout;
+
+			return function (...args) {
+				const timed = () => {
+					timeout = null;
+					fn.apply(this, args);
+				};
+
+				window.clearTimeout(timeout);
+				timeout = window.setTimeout(timed, delay);
+			};
 		}
 	};
 
 	// S T O R A G E HANDLE
-	strg = {
+	const strg = {
 		MAX: 5012,
 		on: false,
 		test: function () {
@@ -295,7 +315,7 @@ Whitelist these on Ghostery
 	strg.init();
 
 	// U P D A T E HANDLE
-	update = {
+	const update = {
 		name: 'ytma!',
 		version: 7910,
 		key: 'ujs_YTMA_UPDT_HR',
@@ -345,7 +365,7 @@ Whitelist these on Ghostery
 			}
 		},
 		csstxt: function () {
-			if (!this.pop) { this.pop = true; $$.css('#userscriptupdater2,#userscriptupdater2:visited{box-shadow:1px 1px 6px #7776;border-bottom:3px solid #d65e55;cursor:pointer;color:#555;font-family:sans-serif;font-size:12px;font-weight:700;text-align:justify;position:fixed;z-index:999999;right:10px;top:10px;background:#ebebeb url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTguODQ4NTMgMTk5LjM4MzA3Ij48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNC4yNzYgLTE2LjM2NykiPjxjaXJjbGUgY3g9IjEwNC4zMjEiIGN5PSIxMTYuMzI3IiByPSI5OC4yNzQiIGZpbGw9IiNkNjVlNTUiLz48cGF0aCBmaWxsPSIjZTljZTAyIiBzdHJva2U9IiNlOWM4MDIiIHN0cm9rZS13aWR0aD0iMTYuNyIgZD0iTTE2Ni40NSAxNTcuMzEySDQxLjg5bDMxLjE0LTUzLjkzNSAzMS4xNC01My45MzUgMzEuMTM3IDUzLjkzNXoiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48dGV4dCB4PSI4NS42NDMiIHk9IjE1MS44NjYiIGZpbGw9IiNkNjVlNTUiIHN0cm9rZS13aWR0aD0iMS40NzciIHN0eWxlPSJsaW5lLWhlaWdodDoxLjI1Oy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0Jvb2sgQW50aXF1YSciIGZvbnQtd2VpZ2h0PSI0MDAiIGZvbnQtc2l6ZT0iNTkuMDg4IiBmb250LWZhbWlseT0iQm9vayBBbnRpcXVhIiBsZXR0ZXItc3BhY2luZz0iMCIgd29yZC1zcGFjaW5nPSIwIj48dHNwYW4geD0iODUuNjQzIiB5PSIxNTEuODY2IiBzdHlsZT0iLWlua3NjYXBlLWZvbnQtc3BlY2lmaWNhdGlvbjonQm9vayBBbnRpcXVhJyIgZm9udC13ZWlnaHQ9IjcwMCIgZm9udC1zaXplPSIxMjYuMDU0Ij4hPC90c3Bhbj48L3RleHQ+PC9nPjwvc3ZnPg==) no-repeat 10px center;background-size:40px;padding:0 20px 0 60px;height:55px;line-height:55px}#userscriptupdater2:hover,#userscriptupdater2:visited:hover{color:#b33a3a !important;border-color:#ce4b30}'); }
+			if (!this.pop) { this.pop = true; _.css('#userscriptupdater2,#userscriptupdater2:visited{box-shadow:1px 1px 6px #7776;border-bottom:3px solid #d65e55;cursor:pointer;color:#555;font-family:sans-serif;font-size:12px;font-weight:700;text-align:justify;position:fixed;z-index:999999;right:10px;top:10px;background:#ebebeb url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTguODQ4NTMgMTk5LjM4MzA3Ij48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNC4yNzYgLTE2LjM2NykiPjxjaXJjbGUgY3g9IjEwNC4zMjEiIGN5PSIxMTYuMzI3IiByPSI5OC4yNzQiIGZpbGw9IiNkNjVlNTUiLz48cGF0aCBmaWxsPSIjZTljZTAyIiBzdHJva2U9IiNlOWM4MDIiIHN0cm9rZS13aWR0aD0iMTYuNyIgZD0iTTE2Ni40NSAxNTcuMzEySDQxLjg5bDMxLjE0LTUzLjkzNSAzMS4xNC01My45MzUgMzEuMTM3IDUzLjkzNXoiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48dGV4dCB4PSI4NS42NDMiIHk9IjE1MS44NjYiIGZpbGw9IiNkNjVlNTUiIHN0cm9rZS13aWR0aD0iMS40NzciIHN0eWxlPSJsaW5lLWhlaWdodDoxLjI1Oy1pbmtzY2FwZS1mb250LXNwZWNpZmljYXRpb246J0Jvb2sgQW50aXF1YSciIGZvbnQtd2VpZ2h0PSI0MDAiIGZvbnQtc2l6ZT0iNTkuMDg4IiBmb250LWZhbWlseT0iQm9vayBBbnRpcXVhIiBsZXR0ZXItc3BhY2luZz0iMCIgd29yZC1zcGFjaW5nPSIwIj48dHNwYW4geD0iODUuNjQzIiB5PSIxNTEuODY2IiBzdHlsZT0iLWlua3NjYXBlLWZvbnQtc3BlY2lmaWNhdGlvbjonQm9vayBBbnRpcXVhJyIgZm9udC13ZWlnaHQ9IjcwMCIgZm9udC1zaXplPSIxMjYuMDU0Ij4hPC90c3Bhbj48L3RleHQ+PC9nPjwvc3ZnPg==) no-repeat 10px center;background-size:40px;padding:0 20px 0 60px;height:55px;line-height:55px}#userscriptupdater2:hover,#userscriptupdater2:visited:hover{color:#b33a3a !important;border-color:#ce4b30}'); }
 		}
 	};
 	update.check();
@@ -357,7 +377,7 @@ Whitelist these on Ghostery
 	 *
 	 * @param {object} props Properties
 	 * @param {String|Number} props.id Unique ID
-	 * @param {String} props.site Website eg: youtube, vimeo
+	 * @param {String} props.site Website name eg: youtube, vimeo
 	 * @param {HTMLAnchorElement} props.anchor Anchor element
 	 */
 	class Y {
@@ -439,7 +459,7 @@ Whitelist these on Ghostery
 			const { ajax, slim } = this.site;
 			const { props } = this;
 
-			this.body = $$.e('div', {
+			this.body = _.e('div', {
 				id: `w${props.uid}`,
 				className: `ytm_spacer ytm_block ytm_site_${props.site}`,
 				innerHTML: this.createThumbnailTemplate()
@@ -505,7 +525,7 @@ Whitelist these on Ghostery
 		}
 
 		createProjector() {
-			this.projector = $$.e('div', {
+			this.projector = _.e('div', {
 				className: 'ytm_projector ytm_none ytm_block ytm_normalize ytm_sans',
 				innerHTML: Container.templates.menu
 			});
@@ -570,7 +590,7 @@ Whitelist these on Ghostery
 				if (t.tagName === 'VAR' && t.dataset.ytmuid) { // trigger the ui
 					console.log('show', t.dataset.ytmuid);
 					Control.createFromTrigger(t).showPlayer();
-				} else if (t.hasAttribute('data-ytmdescription')) {
+				} else if (t.dataset.ytmdescription) {
 					console.log('load', t.dataset.ytmid);
 					Y.external.events.manualLoad(e);
 				}
@@ -667,8 +687,8 @@ Whitelist these on Ghostery
 					}
 				},
 				runOnce: function (loop) {
-					if (!document.body.hasAttribute('ytma-enabled')) {
-						document.body.setAttribute('ytma-enabled', true);
+					if (!document.body.dataset.ytmaenabled) {
+						document.body.dataset.ytmaenabled = true;
 
 						this.checkStorage();
 
@@ -684,6 +704,7 @@ Whitelist these on Ghostery
 						}
 
 						document.body.addEventListener('click', Y.events.clicks, false);
+						_.on(document.body, 'dblclick', 'q[data-full]', Y.external.events.titleToggle);
 					}
 				}
 			},
@@ -710,22 +731,22 @@ Whitelist these on Ghostery
 					Y.route.control.$.runOnce(loop);
 				},
 				'resetera.com': function () {
-					$$.css('.ytm_options li ul li { height: 24px !important }');
-					$$.css('.bbCodeQuote .quoteContainer .quote { max-height: initial } .bbCodeQuote .quoteContainer .quoteExpand.quoteCut { display: none }');
-					$$.css('.bbCodeQuote .ytm_block iframe, .bbCodeQuote .ytm_block [data-s9e-mediaembed], .bbCodeQuote .ytm_block .fb_iframe_widget, .bbCodeQuote .ytm_block object, .bbCodeQuote .ytm_block embed { max-height: initial; max-width: initial }');
+					_.css('.ytm_options li ul li { height: 24px !important }');
+					_.css('.bbCodeQuote .quoteContainer .quote { max-height: initial } .bbCodeQuote .quoteContainer .quoteExpand.quoteCut { display: none }');
+					_.css('.bbCodeQuote .ytm_block iframe, .bbCodeQuote .ytm_block [data-s9e-mediaembed], .bbCodeQuote .ytm_block .fb_iframe_widget, .bbCodeQuote .ytm_block object, .bbCodeQuote .ytm_block embed { max-height: initial; max-width: initial }');
 					this.$generic();
 				},
 				'gfycat.com': function () {
 					const v = document.querySelector('video');
 					v.controls = true;
-					$$.css('body,html {overflow:hidden;height:100%;width:100%} video {display:table;height:100%;margin:0 auto;}');
+					_.css('body,html {overflow:hidden;height:100%;width:100%} video {display:table;height:100%;margin:0 auto;}');
 					document.body.appendChild(v);
 				},
 				'vine.co': function () {
 					// console.log('vine.co');
 
 					window.addEventListener('resize', () => {
-						$$.s('[style]', e => {
+						_.s('[style]', e => {
 							e.removeAttribute('style');
 						});
 					});
@@ -793,11 +814,11 @@ Whitelist these on Ghostery
 					ignore.push(`${blacklist[i]} ${all[j]}`);
 				}
 			}
-			//console.log(ignore);
+			// console.log(ignore.join(','));
 			return ignore.join(',');
 		},
 		iframes: function () { // for resetera, convert iframes back to anchors
-			$$.x('.message-body iframe').forEach(f => {
+			_.s('.message-body iframe', f => {
 				if (/vi\/(.+?)\/hqdefault/.test(f.style.backgroundImage)) {
 					const src = `https://youtu.be/${RegExp.$1}`;
 					const span = f.closest('[data-s9e-mediaembed]');
@@ -807,13 +828,15 @@ Whitelist these on Ghostery
 			});
 		},
 		links: function () {
-			$$.x(Y.selector.ignore()).map(el => { el.setAttribute('ytmaignore', true); });
+			console.time('links #1');
+			_.s(Y.selector.ignore(), ({dataset}) => dataset.ytmaignore = true);
 
-			const links = $$.x(Y.DB.views.getAllSiteSelectors()).filter(el => {
-				const r = !el.hasAttribute('ytmaprocessed') && !el.hasAttribute('ytmaignore');
-				el.setAttribute('ytmaprocessed', true);
+			const links = _.x(Y.DB.views.getAllSiteSelectors()).filter(({dataset}) => {
+				const r = !dataset.ytmaprocessed && !dataset.ytmaignore;
+				dataset.ytmaprocessed = true;
 				return r;
 			});
+			console.timeEnd('links #1');
 
 			return links;
 		},
@@ -895,7 +918,7 @@ Whitelist these on Ghostery
 				return valid;
 			}, {});
 
-			$$.o(Y.user.mapping, (key, val) => {
+			_.o(Y.user.mapping, (key, val) => {
 				if (!val.hasOwnProperty('indexOf')) {
 					Y.user.preferences[key] = val[Y.user.valid[key].indexOf(Y.user.preferences[key])];
 				}
@@ -916,7 +939,7 @@ Whitelist these on Ghostery
 			a[`ytma__quality${Y.user.preferences.quality}`] = !!Y.user.preferences.quality;
 
 			// console.log('marking', a);
-			$$.o(a, (id, val) => {
+			_.o(a, (id, val) => {
 				try {
 					const el = document.getElementById(id);
 					el.checked = val;
@@ -927,33 +950,31 @@ Whitelist these on Ghostery
 			});
 		},
 		events: {
-			save: function (e) {
-				const o = {};
+			save: function () {
+				// console.log(YTMA.user.$form.querySelectorAll('[data-key]'));
+				// [data-key]:checked
+				const settings = Array.from(Y.user.$form.querySelectorAll('[data-key]')).reduce((obj, e) => {
+					let key = e.dataset.key;
 
-				if (e && (/(?:INPUT|LABEL)/i).test(e.target.nodeName)) {
-					// console.log(YTMA.user.$form.querySelectorAll('[data-key]'));
-					// [data-key]:checked
-					Array.from(Y.user.$form.querySelectorAll('[data-key]')).forEach(e => {
-						let key = e.dataset.key;
-
-						if (e.type === 'checkbox') {
-							o[key] = +e.checked;
-						} else if (e.type === 'radio') {
-							if (e.checked) {
-								if (e.hasAttribute('data-num')) {
-									o[key] = +e.dataset.num;
-								}
+					if (e.type === 'checkbox') {
+						obj[key] = +e.checked;
+					} else if (e.type === 'radio') {
+						if (e.checked) {
+							if (e.dataset.num) {
+								obj[key] = +e.dataset.num;
 							}
-						} else {
-							o[key] = +e.value;
 						}
-					});
-
-					if (strg.save(Y.user.KEY, o)) {
-						Y.user.load();
 					} else {
-						Y.user.error.classList.remove('ytm_none');
+						obj[key] = +e.value;
 					}
+
+					return obj;
+				}, {});
+
+				if (strg.save(Y.user.KEY, settings)) {
+					Y.user.load();
+				} else {
+					Y.user.error.classList.remove('ytm_none');
 				}
 
 			},
@@ -1006,7 +1027,7 @@ Whitelist these on Ghostery
 				console.log('showMedia');
 				return new Scroll('a.ytm_scroll:not([data-ytmscroll="false"])', link => {
 					if (Scroll.visibleAll(link, 50)) {
-						$$.s(`var[data-ytmsid="${link.dataset.ytmsid}"]:not([data-ytmscroll="false"])`, trigger => {
+						_.s(`var[data-ytmsid="${link.dataset.ytmsid}"]:not([data-ytmscroll="false"])`, trigger => {
 							const ui = Control.createFromTrigger(trigger);
 							ui.showOnScroll(link);
 						});
@@ -1079,18 +1100,18 @@ Whitelist these on Ghostery
 						</form>
 					</div>`;
 
-				Y.user.$form = $$.e('div', { className: 'ytm_fix_center ytm_none ytm_box', innerHTML: template }, document.body);
+				Y.user.$form = _.e('div', { className: 'ytm_fix_center ytm_none ytm_box', innerHTML: template }, document.body);
 				Y.user.error = document.getElementById('ytm_settings_error');
 
-				const bouncer = Scroll.debounce(Y.user.events.save, 500);
-				Y.user.$form.addEventListener('submit', evt => { evt.preventDefault(); }, false);
-				Y.user.$form.addEventListener('keyup', bouncer, false);
-				Y.user.$form.addEventListener('click', bouncer, false);
-				Y.user.$form.addEventListener('dblclick', Y.user.events.formToggle, false);
+				_.on(Y.user.$form, 'keyup click', 'input, label', _.debounce(Y.user.events.save, 500));
+				Y.user.$form.addEventListener('submit', e => e.preventDefault(), false);
 
-				document.getElementById('ytmaclose').addEventListener('click', Y.user.events.formToggle, false);
 				document.getElementById('ytmareset').addEventListener('click', Y.user.events.reset, false);
 				document.getElementById('ytmaclear').addEventListener('click', Y.user.events.clear, false);
+
+				// close
+				Y.user.$form.addEventListener('dblclick', Y.user.events.formToggle, false);
+				document.getElementById('ytmaclose').addEventListener('click', Y.user.events.formToggle, false);
 				document.body.addEventListener('keydown', Y.user.events.formToggleKeyboard, false);
 			}
 		}
@@ -1101,11 +1122,11 @@ Whitelist these on Ghostery
 		const loadingIcon = 'data:image/gif;base64,R0lGODlhDgAKAJEAAP///+BKV////wAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQFCgACACwAAAAADgAKAAACHFSOeQYI71p6MtAJz41162yBH+do5Ih1kKG0QgEAIfkEBQoAAgAsAAABAA0ACAAAAhSUYGEoerkgdIzKGlu2ET/9ceJmFAAh+QQFCgACACwAAAEADQAIAAACFJRhcbmiglx78SXKYK6za+NxHyYVACH5BAUKAAIALAAAAQANAAgAAAIWVCSAl+hqEGRTLhtbdvTqnlUf9nhTAQAh+QQFCgACACwAAAEADQAIAAACFZRiYCh6uaCRzNXYsKVT+5eBW3gJBQAh+QQJCgACACwAAAAADgAKAAACGpSPaWGwfZhwQtIK8VTUvuxpm9Yp4XlmpiIUADs=';
 
 		// console.log(playerCss);
-		$$.css(playerCss);
+		_.css(playerCss);
 
 		// images
 		// todo update(site, size, padding)
-		$$.css(`
+		_.css(`
 			.ytm_loading{background:url(${loadingIcon}) 0 3px no-repeat;}
 			.ytm_link{background:url(${Y.DB.sites.youtube.favicon}) 0 center no-repeat !important;margin-left:4px;padding-left:20px!important;}
 			.ytm_link.ytm_link_vimeo{background-image:url(${Y.DB.sites.vimeo.favicon}) !important;background-size:12px 12px !important;padding-left:18px!important}
@@ -1117,7 +1138,7 @@ Whitelist these on Ghostery
 			.ytm_link.ytm_link_streamable{background-image:url(${Y.DB.sites.streamable.favicon}) !important; background-size: 12px 12px !important;padding-left: 14px !important;}
 		`);
 
-		$$.css('.ytm_none,.ytm_link br{display:none!important}.ytm_box{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box}.ytm_block{display:block;position:relative;clear:both;text-align:left;border:0;margin:0;padding:0;overflow:hidden}.ytm_normalize{font-weight:400!important;font-style:normal!important;line-height:1.2!important}.ytm_sans{font-family:Arial,Helvetica,sans-serif!important}.ytm_spacer{overflow:auto;margin:0 0 6px;padding:4px}.ytm_spacer.ytm_site_slim{display:inline}.ytm_clear:after{content:"";display:table;clear:both}.ytm_center{text-align:center}.ytm_link b,.ytm_link strong{font-weight:400!important}.ytm_link u{text-decoration:none!important}.ytm_link i,.ytm_link em{font-style:normal!important}.ytm_trigger{width:118px;height:66px;background-color:#262626!important;cursor:pointer;background-position:-1px -12px;float:left;box-shadow:2px 2px rgba(0,0,0,.3);background-size:auto 90px!important;color:#fff;text-shadow:#333 0 0 2px;font-size:13px}.ytm_trigger:hover{box-shadow:2px 2px #60656b80;opacity:.95}.ytm_trigger var{z-index:2;height:100%;width:100%;position:absolute;left:0;top:0;text-align:right}.ytm_label{display:block;padding:3px 6px;line-height:1.2;font-style:normal}.ytm_init{height:22px;background:rgba(11,11,11,.62);padding:4px 25px 6px 6px}.ytm_site_vine .ytm_trigger{background-color:#90ee90!important;background-size:120px auto!important}.ytm_site_slim .ytm_trigger{background:#e34c26!important;height:auto;box-shadow:0 0 2px #ffdb9d inset,2px 2px rgba(0,0,0,.3);margin:0 3px 0 0;width:auto;transition:all .3s ease-in-out 0s}.ytm_site_slim .ytm_trigger:hover{opacity:.8}.ytm_site_slim .ytm_label{text-shadow:0 0 1px #f06529}.ytm_site_slim .ytm_init{background:transparent}.ytm_bd{float:left;max-width:500px;margin:2px 10px;font-size:90%}.ytm_title{font-weight:700}.ytm_error{color:#cc2f24;font-style:italic}.ytm_loading{font-style:italic;padding:1px 1.5em}.ytm_descr{word-wrap:break-word;max-height:48px;overflow:auto;padding-right:20px}.ytm_descr[data-full]{cursor:pointer}.ytm_descr_open{resize:both;white-space:pre-line}.ytm_descr_open[style]{max-height:none}.ytm_projector{margin-bottom:4px}ul.ytm_options{overflow:hidden;margin:0!important;padding:3px 0 1px;list-style-position:outside!important}.ytm_options li{display:inline;margin:0!important;padding:0!important}.ytm_options li>ul{display:inline-block;margin:0;padding:0 1px 0 0}.ytm_options li ul li{-webkit-user-select:none;-moz-user-select:none;-o-user-select:none;user-select:none;list-style-type:none;cursor:pointer;float:left;color:#858585;border:1px solid #1d1d1d;border-bottom:1px solid #181818;border-top:1px solid #292929;box-shadow:0 0 1px #555;height:14px;font-size:12px!important;line-height:12px!important;background:#222;background:linear-gradient(#2d2c2c,#222);margin:0!important;padding:5px 9px 3px!important}.ytm_options li ul li:first-child{border-radius:2px 0 0 2px}.ytm_options li ul li:last-child{border-left:0!important;border-radius:0 2px 2px 0;margin:0 2px 0 0!important}.ytm_options li ul li:first-child:last-child,.ytm_li_setting{border-radius:2px}.ytm_options li ul li:hover{color:#ccc;text-shadow:1px 1px 0 #333;background:#181818}.ytm_options li ul li[id]{color:#ddd;text-shadow:0 0 2px #444}.ytm_panel_size{background:#000;max-width:100%;}.ytm_panel_switcher[data-standby="true"]{background:#111}.ytm_panel_switcher[data-standby="true"]:after{cursor:cell;color:#0e0e0e;content:"ytma!";display:block;font-size:85px;font-style:italic;font-weight:700;left:50%;position:absolute;text-shadow:2px 1px #181818,-1px -1px #0a0a0a;top:50%;transform:translate(-50%,-50%)}.ytm_site_soundcloud .ytm_panel_size.ytm_soundcloud-playlist{height:334px!important}.ytm_fix_center{background:rgba(51,51,51,.41);height:100%;left:0;position:fixed;top:0;width:100%;z-index:99998}#ytm_settings{z-index:99999;max-width:500px;max-height:85%;overflow:auto;background:#fbfbfb;border:1px solid #bbb;color:#444;box-shadow:0 0 5px rgba(0,0,0,.2),0 0 3px rgba(239,239,239,.1) inset;margin:4% auto;padding:4px 8px 0}#ytm_settings p{margin:5px 0;padding:0}#ytm_settings fieldset{vertical-align:top;border-radius:3px;border:1px solid #ccc;margin:0 0 5px;padding:3px}#ytm_settings legend{padding:3px}#ytm_settings fieldset span{display:inline-block;min-width:5em}#ytm_settings input{vertical-align:baseline!important;margin:3px 5px!important}#ytm_settingst{font-size:110%;border-bottom:1px solid #d00;margin:3px 0 9px;padding:0 3px 3px}#ytm_settings label{cursor:pointer}#ytm_settings small{font-size:90%}#ytm_opts button{cursor:pointer;margin:10px 5px 8px 2px;padding:3px;border:1px solid #adadad;border-radius:2px;background:#eee;font-size:90%}#ytm_opts button:hover{background:#ddd}');
+		_.css('.ytm_none,.ytm_link br{display:none!important}.ytm_box{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box}.ytm_block{display:block;position:relative;clear:both;text-align:left;border:0;margin:0;padding:0;overflow:hidden}.ytm_normalize{font-weight:400!important;font-style:normal!important;line-height:1.2!important}.ytm_sans{font-family:Arial,Helvetica,sans-serif!important}.ytm_spacer{overflow:auto;margin:0 0 6px;padding:4px}.ytm_spacer.ytm_site_slim{display:inline}.ytm_clear:after{content:"";display:table;clear:both}.ytm_center{text-align:center}.ytm_link b,.ytm_link strong{font-weight:400!important}.ytm_link u{text-decoration:none!important}.ytm_link i,.ytm_link em{font-style:normal!important}.ytm_trigger{width:118px;height:66px;background-color:#262626!important;cursor:pointer;background-position:-1px -12px;float:left;box-shadow:2px 2px rgba(0,0,0,.3);background-size:auto 90px!important;color:#fff;text-shadow:#333 0 0 2px;font-size:13px}.ytm_trigger:hover{box-shadow:2px 2px #60656b80;opacity:.95}.ytm_trigger var{z-index:2;height:100%;width:100%;position:absolute;left:0;top:0;text-align:right}.ytm_label{display:block;padding:3px 6px;line-height:1.2;font-style:normal}.ytm_init{height:22px;background:rgba(11,11,11,.62);padding:4px 25px 6px 6px}.ytm_site_vine .ytm_trigger{background-color:#90ee90!important;background-size:120px auto!important}.ytm_site_slim .ytm_trigger{background:#e34c26!important;height:auto;box-shadow:0 0 2px #ffdb9d inset,2px 2px rgba(0,0,0,.3);margin:0 3px 0 0;width:auto;transition:all .3s ease-in-out 0s}.ytm_site_slim .ytm_trigger:hover{opacity:.8}.ytm_site_slim .ytm_label{text-shadow:0 0 1px #f06529}.ytm_site_slim .ytm_init{background:transparent}.ytm_bd{float:left;max-width:500px;margin:2px 10px;font-size:12px}.ytm_title{font-weight:700}.ytm_error{color:#cc2f24;font-style:italic}.ytm_loading{font-style:italic;padding:1px 1.5em}.ytm_descr{word-wrap:break-word;max-height:48px;overflow:auto;padding-right:20px}.ytm_descr[data-full]{cursor:pointer}.ytm_descr_open{resize:both;white-space:pre-line;background:linear-gradient(to bottom, rgba(0,0,0,0) 0%,rgba(0,0,0,0) 50%,rgba(0,0,0,0) 80%,rgba(0,0,0,0.1) 100%)}.ytm_descr_open[style]{max-height:none}.ytm_projector{margin-bottom:4px}ul.ytm_options{overflow:hidden;margin:0!important;padding:3px 0 1px;list-style-position:outside!important}.ytm_options li{display:inline;margin:0!important;padding:0!important}.ytm_options li>ul{display:inline-block;margin:0;padding:0 1px 0 0}.ytm_options li ul li{-webkit-user-select:none;-moz-user-select:none;-o-user-select:none;user-select:none;list-style-type:none;cursor:pointer;float:left;color:#858585;border:1px solid #1d1d1d;border-bottom:1px solid #181818;border-top:1px solid #292929;box-shadow:0 0 1px #555;height:14px;font-size:12px!important;line-height:12px!important;background:#222;background:linear-gradient(#2d2c2c,#222);margin:0!important;padding:5px 9px 3px!important}.ytm_options li ul li:first-child{border-radius:2px 0 0 2px}.ytm_options li ul li:last-child{border-left:0!important;border-radius:0 2px 2px 0;margin:0 2px 0 0!important}.ytm_options li ul li:first-child:last-child,.ytm_li_setting{border-radius:2px}.ytm_options li ul li:hover{color:#ccc;text-shadow:1px 1px 0 #333;background:#181818}.ytm_options li ul li[id]{color:#ddd;text-shadow:0 0 2px #444}.ytm_panel_size{background:#000;max-width:100%;}.ytm_panel_switcher[data-standby="true"]{background:#111}.ytm_panel_switcher[data-standby="true"]:after{cursor:cell;color:#0e0e0e;content:"ytma!";display:block;font-size:85px;font-style:italic;font-weight:700;left:50%;position:absolute;text-shadow:2px 1px #181818,-1px -1px #0a0a0a;top:50%;transform:translate(-50%,-50%)}.ytm_site_soundcloud .ytm_panel_size.ytm_soundcloud-playlist{height:334px!important}.ytm_fix_center{background:rgba(51,51,51,.41);height:100%;left:0;position:fixed;top:0;width:100%;z-index:99998}#ytm_settings{z-index:99999;max-width:500px;max-height:85%;overflow:auto;background:#fbfbfb;border:1px solid #bbb;color:#444;box-shadow:0 0 5px rgba(0,0,0,.2),0 0 3px rgba(239,239,239,.1) inset;margin:4% auto;padding:4px 8px 0}#ytm_settings p{margin:5px 0;padding:0}#ytm_settings fieldset{vertical-align:top;border-radius:3px;border:1px solid #ccc;margin:0 0 5px;padding:3px}#ytm_settings legend{padding:3px}#ytm_settings fieldset span{display:inline-block;min-width:5em}#ytm_settings input{vertical-align:baseline!important;margin:3px 5px!important}#ytm_settingst{font-size:110%;border-bottom:1px solid #d00;margin:3px 0 9px;padding:0 3px 3px}#ytm_settings label{cursor:pointer}#ytm_settings small{font-size:90%}#ytm_opts button{cursor:pointer;margin:10px 5px 8px 2px;padding:3px;border:1px solid #adadad;border-radius:2px;background:#eee;font-size:90%}#ytm_opts button:hover{background:#ddd}');
 	};
 
 	Y.ajax = {
@@ -1209,7 +1230,7 @@ Whitelist these on Ghostery
 			}
 		},
 		failure: function () {
-			$$.s(`.ytm_bd._${Y.escapeId(this.id)}`, el => {
+			_.s(`.ytm_bd._${Y.escapeId(this.id)}`, el => {
 				const a = el.querySelector('a');
 				a.dataset.tries = a.dataset.tries ? parseFloat(a.dataset.tries) + 1 : 1;
 				if (a.dataset.tries >= 5) {
@@ -1221,9 +1242,9 @@ Whitelist these on Ghostery
 			});
 		},
 		preProcess: function (id) {
-			$$.s(`.ytm_manual._${Y.escapeId(id)} a`, el => {
+			_.s(`.ytm_manual._${Y.escapeId(id)} a`, el => {
 				el.classList.add('ytm_loading');
-				el.textContent = 'Loading data . . .';
+				el.textContent = 'Loading';
 				el.title = 'Retry loading data.';
 			});
 		}
@@ -1349,14 +1370,7 @@ Whitelist these on Ghostery
 				return data;
 			},
 			thumbnail: function ({ id, th }) {
-				$$.s('[data-ytmid="%id"].ytm_trigger'.replace('%id', id), el => {
-					el.setAttribute('style', `background: url(${th})`);
-				});
-			},
-			titleToggle: function () {
-				this.classList.toggle('ytm_descr_open');
-				this.textContent = this.textContent.length < 140 ? this.dataset.full : `${this.dataset.full.substr(0, 130)} . . .`;
-				this.removeAttribute('style');
+				_.s(`[data-ytmid="${id}"].ytm_trigger`, el => el.setAttribute('style', `background: url(${th})`));
 			}
 		},
 		time: {
@@ -1428,18 +1442,17 @@ Whitelist these on Ghostery
 			if (!ignoreValidation && !this.validate(data)) { return; }
 
 			this.set(data);
+			const { id, th, full, desc, title } = data;
 
-			if (data.th) { this.helper.thumbnail(data); }
+			if (th) { this.helper.thumbnail(data); }
 
-			$$.s(`.ytm_bd._${Y.escapeId(data.id)}`, el => {
-				let q;
-				el.innerHTML = `<span class="ytm_title">${data.title}</span>`;
-				if (data.desc) {
-					q = $$.e('q', { className: 'ytm_descr ytm_block', textContent: data.desc }, el);
-					if (data.full) {
-						q.dataset.full = data.full;
-						q.title = 'Click to toggle the length of the description.';
-						q.addEventListener('dblclick', Y.external.helper.titleToggle, false);
+			_.s(`.ytm_bd._${Y.escapeId(id)}`, el => {
+				el.innerHTML = `<span class="ytm_title">${title}</span>`;
+				if (desc) {
+					const q = _.e('q', { className: 'ytm_descr ytm_block', textContent: desc }, el);
+					if (full.length > desc.length) {
+						q.dataset.full = full;
+						q.title = 'Double click to toggle the description.';
 					}
 				}
 			});
@@ -1451,11 +1464,17 @@ Whitelist these on Ghostery
 		},
 		events: {
 			manualLoad: function (e) {
-				console.log(e.target.dataset.tries);
 				e.preventDefault();
 				if ((e.target.dataset.tries || 0) <= 4) {
 					Y.ajax.loadFromDataset(e.target.dataset);
 				}
+			},
+			titleToggle: function (e) {
+				e.preventDefault();
+				const target = e.target;
+				target.classList.toggle('ytm_descr_open');
+				target.textContent = target.textContent.length < 140 ? target.dataset.full : `${target.dataset.full.substr(0, 130)} . . .`;
+				target.removeAttribute('style');
 			}
 		}
 	};
@@ -1872,9 +1891,9 @@ Whitelist these on Ghostery
 			this.attrs.type = this.findType();
 			this.media = Player.makeMedia[this.attrs.type](this);
 
-			this.channel = $$.e('div', { className: 'ytm_panel_channel ytm_block' }, this.media, true);
-			this.switcher = $$.e('div', { className: `ytm_panel_switcher ytm_panel_size ytm_block ytm_${this.attrs.type}`, _ytmuid: this.parent.props.uid, _standby: true });
-			this.panel = $$.e('div', { className: 'ytm_panel ytm_block' }, this.switcher, true);
+			this.channel = _.e('div', { className: 'ytm_panel_channel ytm_block' }, this.media, true);
+			this.switcher = _.e('div', { className: `ytm_panel_switcher ytm_panel_size ytm_block ytm_${this.attrs.type}`, _ytmuid: this.parent.props.uid, _standby: true });
+			this.panel = _.e('div', { className: 'ytm_panel ytm_block' }, this.switcher, true);
 
 			if (parent.props.site === 'soundcloud' && Y.reg.extra.soundcloud.playlist.test(parent.anchor.href)) {
 				this.media.classList.add('ytm_soundcloud-playlist');
@@ -1952,7 +1971,7 @@ Whitelist these on Ghostery
 			return `\t${key}: ${value};\n`;
 		},
 		iter: function (css, cssEntries) {
-			$$.o(cssEntries, (key, value) => {
+			_.o(cssEntries, (key, value) => {
 				css.push(Player.css.item(key, value));
 			});
 			css.push('}');
@@ -1960,16 +1979,16 @@ Whitelist these on Ghostery
 		generator: function () {
 			const css = [];
 
-			$$.o(this.sizes, (size, sizes) => {
-				$$.o(sizes, (dimm, keys) => {
+			_.o(this.sizes, (size, sizes) => {
+				_.o(sizes, (dimm, keys) => {
 					css.push(`\n.ytm_panel-${size}.ytm_panel-${dimm} .ytm_panel_size {\n`);
 					Player.css.iter(css, keys);
 				});
 			});
 
 			// add site overrides
-			$$.o(this.sites, (site, data) => {
-				$$.o(data, (setting, keys) => {
+			_.o(this.sites, (site, data) => {
+				_.o(data, (setting, keys) => {
 					if (setting === 'all') {
 						css.push(`\n.ytm_site_${site} .ytm_panel_size {\n`);
 					} else {
@@ -1984,11 +2003,11 @@ Whitelist these on Ghostery
 		sizes: (() => {
 			const merge = {};
 
-			$$.o(Y.DB.playerSize.sizes, (num, size) => {
+			_.o(Y.DB.playerSize.sizes, (num, size) => {
 				if (num >= 0) {
 					merge[size] = {};
 
-					$$.o(Y.DB.playerSize.ratios, (k, ratio) => {
+					_.o(Y.DB.playerSize.ratios, (k, ratio) => {
 						if (ratio === 'pr') {
 							const w = Math.floor(num * 0.95); // smaller than the normal sizes
 							merge[size][ratio] = {
@@ -2039,7 +2058,7 @@ Whitelist these on Ghostery
 			return `ytm_panel_media ytm_panel_size ytm_block ytm_${type}`;
 		},
 		video: function ({ attrs }) {
-			const video = $$.e('video', {
+			const video = _.e('video', {
 				controls: true,
 				autoplay: false,
 				loop: true,
@@ -2051,17 +2070,17 @@ Whitelist these on Ghostery
 			const links = [];
 
 			attrs.sources.forEach(({ src, type }) => {
-				$$.e('source', { src, $type: type }, video);
+				_.e('source', { src, $type: type }, video);
 
 				links.push(`<a href="${src}">${src}</a>`);
 			});
 
-			$$.e('p', { innerHTML: `Could not load source(s): ${links.join('<br />')}` }, video);
+			_.e('p', { innerHTML: `Could not load source(s): ${links.join('<br />')}` }, video);
 
 			return video;
 		},
 		iframe: function ({ attrs }) {
-			return $$.e('iframe', {
+			return _.e('iframe', {
 				$allowfullscreen: true,
 				$referrerpolicy: 'no-referrer',
 				// $sandbox: 'allow-same-origin allow-scripts allow-popups',
@@ -2071,7 +2090,7 @@ Whitelist these on Ghostery
 			});
 		},
 		audio: function ({ attrs }) {
-			return $$.e('audio', {
+			return _.e('audio', {
 				src: attrs.sources[0].src,
 				$type: attrs.sources[0].type
 			});
@@ -2082,12 +2101,13 @@ Whitelist these on Ghostery
 	 * Window-Scroll Event Helper
 	 */
 	class Scroll {
-		constructor(selector, cb, delay) {
+		constructor(selector, cb, delay = 500) {
 			this.selector = selector;
 			this.cb = cb;
+			this.monitor = this.monitor.bind(this);
 
 			// console.log('YTMA.Scroll Monitor: ', selector);
-			this.bound = Scroll.debounce(this.monitor.bind(this), delay || 500);
+			this.bound = _.debounce(this.monitor, delay);
 
 			this.bound();
 			window.addEventListener('scroll', this.bound, false);
@@ -2099,24 +2119,9 @@ Whitelist these on Ghostery
 		}
 
 		monitor() {
-			$$.s(this.selector, this.cb);
+			_.s(this.selector, this.cb);
 		}
 	}
-
-	Scroll.debounce = (fn, delay = 250) => {
-		let timeout;
-
-		return function (...args) {
-			const self = this;
-			const timed = () => {
-				timeout = null;
-				fn.apply(self, args);
-			};
-
-			window.clearTimeout(timeout);
-			timeout = window.setTimeout(timed, delay);
-		};
-	};
 
 	Scroll.visible = el => {
 		const bound = el.getBoundingClientRect();
