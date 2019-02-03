@@ -448,7 +448,8 @@ Whitelist these on Ghostery
 	}
 
 	/** C O N T A I N E R CLASS
-	 * The container, as the name implies, contains all the elements that we creaete with
+	 * The container, as the name implies, contains all the interactive elements
+	 * Thumbnail, Player, Controls, etc.
 	 */
 	class Container extends Y {
 
@@ -467,7 +468,7 @@ Whitelist these on Ghostery
 
 			this.thumbnail = this.body.firstElementChild;
 
-			if (ajax) { this.createAjaxLink(props); }
+			if (ajax) { this.createAjaxLink(); }
 			if (slim) { this.body.classList.add('ytm_site_slim'); }
 
 			this.anchor.insertAdjacentElement('afterend', this.body);
@@ -529,7 +530,6 @@ Whitelist these on Ghostery
 				className: 'ytm_projector ytm_none ytm_block ytm_normalize ytm_sans',
 				innerHTML: Container.templates.menu
 			});
-
 			this.thumbnail.insertAdjacentElement('afterend', this.projector);
 		}
 
@@ -629,10 +629,9 @@ Whitelist these on Ghostery
 	Y.grabIdAndSite = (link, cb) => {
 		let uri = link.href || link.src;
 		let id;
-		let site;
 		let match;
 		try {
-			site = Y.reg.siteByTest[Y.reg.siteExpressions.test(uri) ? RegExp.lastMatch : ''];
+			const site = Y.reg.siteByTest[Y.reg.siteExpressions.test(uri) ? RegExp.lastMatch : ''];
 			// console.log(site);
 
 			if (site === 'html5') { // || site === 'html5-audio'
@@ -792,9 +791,8 @@ Whitelist these on Ghostery
 		fix: {
 			soundcloud: function (uri) {
 				const match = Y.DB.sites.soundcloud.matcher.exec(uri);
-				let id;
 				if (match) {
-					id = match[1].split('/', 2).join('/');
+					const id = match[1].split('/', 2).join('/');
 					uri = removeSearch(`https://soundcloud.com/${id}`, true);
 				}
 
@@ -861,7 +859,6 @@ Whitelist these on Ghostery
 	 * autoShow: 0/1; Will automatically display HTML5 videos, which currently lack descriptions and thumbnails
 	 * desc: (Descriptions) 0 None; 1 Yes on scroll; 2 Yes all at once
 	 * yt_nocookie: 0/1; Will disable/enable youtube-nocookie.com
-	 * yt_volume: positive number; youtube volume
 	 * yt_annotation: 0/1; youtube annotations
 	 */
 	Y.user = {
@@ -883,21 +880,16 @@ Whitelist these on Ghostery
 			quality: [240, 360, 480, 720, 1080],
 			autoShow: [0, 1],
 			yt_nocookie: [0, 1],
-			yt_annotation: [0, 1], // hide | show
-			yt_volume: 100 // todo? (function () { var a = new Array(101); for (i = 0; i <= 100; i++) { a[i] = i; } return a; }())
+			yt_annotation: [0, 1] // hide | show
 		},
 		mapping: { // map values to some other values used by an external API, for example
 			yt_annotation: [3, 1] // 3 = hide | 1 = show
 		},
 		validate: function (property, n) {
 			n = +n;
-
-			if (property === 'yt_volume') {
-				return n >= 0 && n <= 100 ? (+n) : Y.user.defaults()[property];
-			}
-			return Y.user.valid[property].includes(n) ? n : Y.user.defaults()[property];
+			return Y.user.valid[property].includes(n) ? n : Y.user.defaults[property];
 		},
-		defaults: function () {
+		get defaults() {
 			return {
 				focus: 0,
 				desc: 1,
@@ -906,14 +898,13 @@ Whitelist these on Ghostery
 				quality: 720,
 				autoShow: 1,
 				yt_nocookie: 0,
-				yt_annotation: 1,
-				yt_volume: 100
+				yt_annotation: 1
 			};
 		},
 		load: function () {
 			const s = strg.grab(Y.user.KEY, {});
 
-			Y.user.preferences = Object.keys(this.defaults()).reduce((valid, k) => {
+			Y.user.preferences = Object.keys(this.defaults).reduce((valid, k) => {
 				valid[k] = Y.user.validate(k, s[k]);
 				return valid;
 			}, {});
@@ -932,7 +923,6 @@ Whitelist these on Ghostery
 			a.ytma__autoShow = !!Y.user.preferences.autoShow;
 			a.ytma__yt_nocookie = !!Y.user.preferences.yt_nocookie;
 			a.ytma__yt_annotation = !!Y.user.preferences.yt_annotation;
-			a.ytma__yt_volume = Y.user.preferences.yt_volume;
 			a[`ytma__ratio${Y.user.preferences.ratio}`] = true;
 			a[`ytma__size${Y.user.preferences.size}`] = true;
 			a[`ytma__desc${Y.user.preferences.desc}`] = true;
@@ -979,7 +969,7 @@ Whitelist these on Ghostery
 
 			},
 			reset: function () {
-				Y.user.preferences = Y.user.defaults();
+				Y.user.preferences = Y.user.defaults;
 				Y.user.mark();
 				strg.wipe(Y.user.KEY);
 				Y.user.error.classList.add('ytm_none');
@@ -1663,7 +1653,7 @@ Whitelist these on Ghostery
 				];
 			},
 			youtube: function ({ id }, { quality, start }) {
-				const params = `?html5=1&version=3&modestbranding=1&rel=0&showinfo=1&vq=${quality}&iv_load_policy=${Y.user.preferences.yt_annotation}&start=${start}&rel=0`;// + YTMA.user.preferences.yt_volume;
+				const params = `?html5=1&version=3&modestbranding=1&rel=0&showinfo=1&vq=${quality}&iv_load_policy=${Y.user.preferences.yt_annotation}&start=${start}&rel=0`;
 
 				return [
 					{ type: 'text/html', src: Y.DB.sites.youtube.embed.replace('%key', id) + params }
@@ -1833,7 +1823,7 @@ Whitelist these on Ghostery
 				Y.user.events.formToggle();
 			},
 			close: function () {
-				if (Y.DB.sites[this.props.site].scroll) {
+				if (this.site.scroll) {
 					console.log('events.close-1');
 					this.hideAllPlayers();
 				} else {
@@ -1855,10 +1845,9 @@ Whitelist these on Ghostery
 		},
 		videoBar: function ({ target }) {
 			const el = target;
-			let t;
 
 			if (el.tagName.toLowerCase() === 'li' && el.dataset && el.dataset.type) {
-				t = el.dataset.type;
+				const t = el.dataset.type;
 				if (Control.events.$fire[t]) {
 					Control.events.$fire[t].call(this, el);
 				}
@@ -1919,7 +1908,7 @@ Whitelist these on Ghostery
 
 		findType() {
 			if (this.parent.props.site === 'html5-audio') { return 'audio'; }
-			if (Y.DB.sites[this.parent.props.site].videoTag) { return 'video'; }
+			if (this.parent.site.videoTag) { return 'video'; }
 			return 'iframe';
 		}
 
