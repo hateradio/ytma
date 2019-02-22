@@ -382,10 +382,10 @@ Whitelist these on Ghostery
 	 */
 	class Y {
 
-		constructor({id, site, anchor}) {
+		constructor({ id, site, anchor }) {
 			const uid = Y.escapeId(`${id}_${Y.num += 1}`);
 
-			this.props = {
+			this.state = {
 				id,
 				uid: Y.escapeId(uid), // unique id
 				sid: Y.escapeId(id), // shared id
@@ -406,7 +406,7 @@ Whitelist these on Ghostery
 			const id = dataset.ytmid;
 			const anchor = document.querySelector(`a[data-ytmuid="${dataset.ytmuid}"]`);
 
-			this.props = {
+			this.state = {
 				id,
 				uid: dataset.ytmuid,
 				sid: dataset.ytmsid,
@@ -437,11 +437,11 @@ Whitelist these on Ghostery
 
 		updateAnchor() {
 			if (this.anchor.getElementsByTagName('img').length === 0) {
-				this.anchor.className += ` ytm_link ytm_link_${this.props.site} `;
+				this.anchor.className += ` ytm_link ytm_link_${this.state.site} `;
 			}
-			this.anchor.dataset.ytmid = this.props.id;
-			this.anchor.dataset.ytmuid = this.props.uid;
-			this.anchor.dataset.ytmsid = this.props.sid;
+			this.anchor.dataset.ytmid = this.state.id;
+			this.anchor.dataset.ytmuid = this.state.uid;
+			this.anchor.dataset.ytmsid = this.state.sid;
 			this.anchor.title = 'Visit the video page.';
 		}
 
@@ -454,15 +454,15 @@ Whitelist these on Ghostery
 	class Container extends Y {
 
 		createInterface() {
-			this.site = Y.DB.sites[this.props.site];
+			this.site = Y.DB.sites[this.state.site];
 			this.updateAnchor();
 
 			const { ajax, slim } = this.site;
-			const { props } = this;
+			const { state } = this;
 
 			this.body = _.e('div', {
-				id: `w${props.uid}`,
-				className: `ytm_spacer ytm_block ytm_site_${props.site}`,
+				id: `w${state.uid}`,
+				className: `ytm_spacer ytm_block ytm_site_${state.site}`,
 				innerHTML: this.createThumbnailTemplate()
 			});
 
@@ -474,7 +474,7 @@ Whitelist these on Ghostery
 			this.anchor.insertAdjacentElement('afterend', this.body);
 
 			try {
-				Container.decorators[this.props.site](this);
+				Container.decorators[this.state.site](this);
 			} catch (e) {
 				// meh
 			}
@@ -489,10 +489,10 @@ Whitelist these on Ghostery
 		}
 
 		createThumbnailTemplate() {
-			const {title, thumb = ''} = this.site;
-			const {id, uid, sid, site} = this.props;
+			const { title, thumb = '' } = this.site;
+			const { id, uid, sid, site } = this.state;
 
-			const bg = thumb ? `background-image: ${thumb.replace('%key', id)}`  : '';
+			const bg = thumb ? `background-image: ${thumb.replace('%key', id)}` : '';
 
 			const template = `
 				<span class="ytm_trigger ytm_block ytm_normalize ytm_sans"
@@ -512,7 +512,7 @@ Whitelist these on Ghostery
 		}
 
 		createAjaxLink() {
-			const { sid, id, site, uri } = this.props;
+			const { sid, id, site, uri } = this.state;
 			const template = `
 				<span class="ytm_bd ytm_normalize ytm_manual _${sid}">
 					<a href="#" class="ytm_title" title="Load this video's description."
@@ -588,10 +588,10 @@ Whitelist these on Ghostery
 			if (t) {
 				// console.log('YTMA.clicks');
 				if (t.tagName === 'VAR' && t.dataset.ytmuid) { // trigger the ui
-					console.log('show', t.dataset.ytmuid);
+					console.info('ytma//click+trig(id)', t.dataset.ytmuid);
 					Control.createFromTrigger(t).showPlayer();
 				} else if (t.dataset.ytmdescription) {
-					console.log('load', t.dataset.ytmid);
+					console.info('ytma//click+desc(id)', t.dataset.ytmid);
 					Y.external.events.manualLoad(e);
 				}
 			}
@@ -611,7 +611,7 @@ Whitelist these on Ghostery
 
 	Y.num = 0;
 
-	Y.addToSet = ytma => Y.set[ytma.props.uid] = ytma;
+	Y.addToSet = ytma => Y.set[ytma.state.uid] = ytma;
 
 	Y.create = link => Y.grabIdAndSite(link, (data, err) => {
 		if (err) {
@@ -619,7 +619,7 @@ Whitelist these on Ghostery
 			return {};
 		}
 
-		const control = new Control({...data, anchor: link});
+		const control = new Control({ ...data, anchor: link });
 		Y.addToSet(control);
 		control.createInterface();
 
@@ -651,7 +651,7 @@ Whitelist these on Ghostery
 				id = uri.match(Y.DB.sites[site].matcher)[1];
 			}
 
-			console.log(id, site, match);
+			console.info('ytma//id+site', id, site, match);
 			if (id && Y.DB.sites[site]) {
 				return cb({ id, site }, null);
 			}
@@ -708,7 +708,7 @@ Whitelist these on Ghostery
 				}
 			},
 			go: function (host) {
-				console.log(host);
+				console.info('ytma//host', host);
 				if (/(?:googlevideo|youtube-nocookie\.com|youtube\.com\.?)/i.test(host)) {
 					this.sites.youtube();
 				} else if (this.sites[host]) {
@@ -724,7 +724,7 @@ Whitelist these on Ghostery
 							Y.user.fn.loadPreferences();
 						}
 
-						console.log('ytma! . . . again!!');
+						console.info('ytma//again++');
 					}
 
 					Y.route.control.$.runOnce(loop);
@@ -760,7 +760,7 @@ Whitelist these on Ghostery
 	};
 
 	Y.main = () => {
-		Y.reg.siteExpressions = Y.DB.views.getAllSiteRegExps();
+		Y.reg.siteExpressions = Y.reg.getAllSiteRegExps();
 		// console.log(YTMA.reg.siteExpressions);
 		Y.route.load();
 	};
@@ -788,6 +788,13 @@ Whitelist these on Ghostery
 			soundcloud: 'soundcloud',
 			'streamable.com': 'streamable'
 		},
+		getAllSiteRegExps: function () {
+			const regs = Object.values(Y.DB.sites)
+				.filter(({ reg }) => reg)
+				.map(({ reg }) => reg);
+
+			return new RegExp(`\\b${regs.join('|')}`);
+		},
 		fix: {
 			soundcloud: function (uri) {
 				const match = Y.DB.sites.soundcloud.matcher.exec(uri);
@@ -803,9 +810,16 @@ Whitelist these on Ghostery
 
 	Y.selector = { // to build the selector
 		parentBlacklist: ['.smallfont', '.colhead_dark', '.spoiler', 'pre', '.messageUserInfo', '.fr-box'],
+		getAllSiteSelectors: function () {
+			const sels = Object.values(Y.DB.sites)
+				.filter(({ selector }) => selector)
+				.map(({ selector }) => selector);
+
+			return sels.join();
+		},
 		ignore: function () {
 			const ignore = [];
-			const all = Y.DB.views.getAllSiteSelectors().split(',');
+			const all = Y.selector.getAllSiteSelectors().split(',');
 			const blacklist = this.parentBlacklist;
 			for (let i = 0; i < blacklist.length; i++) {
 				for (let j = 0; j < all.length; j++) {
@@ -826,15 +840,13 @@ Whitelist these on Ghostery
 			});
 		},
 		links: function () {
-			console.time('links #1');
-			_.s(Y.selector.ignore(), ({dataset}) => dataset.ytmaignore = true);
+			_.s(Y.selector.ignore(), ({ dataset }) => dataset.ytmaignore = true);
 
-			const links = _.x(Y.DB.views.getAllSiteSelectors()).filter(({dataset}) => {
+			const links = _.x(Y.selector.getAllSiteSelectors()).filter(({ dataset }) => {
 				const r = !dataset.ytmaprocessed && !dataset.ytmaignore;
 				dataset.ytmaprocessed = true;
 				return r;
 			});
-			console.timeEnd('links #1');
 
 			return links;
 		},
@@ -915,7 +927,7 @@ Whitelist these on Ghostery
 				}
 			});
 
-			console.log('loaded: ', Y.user.preferences);
+			console.info('ytma//user+loaded(prefs)', Y.user.preferences);
 		},
 		mark: function () {
 			const a = {};
@@ -978,7 +990,7 @@ Whitelist these on Ghostery
 				try {
 					localStorage.removeItem(Y.external.version);
 					Y.user.events.reset();
-					console.log('removed all YTMA cache');
+					console.info('ytma//cache+remove', 'removed all YTMA cache');
 				} catch (e) {
 					console.error(e);
 				}
@@ -1014,7 +1026,7 @@ Whitelist these on Ghostery
 				}
 			},
 			showMedia: function () {
-				console.log('showMedia');
+				// console.info('ytma//user+fn-showMedia');
 				return new Scroll('a.ytm_scroll:not([data-ytmscroll="false"])', link => {
 					if (Scroll.visibleAll(link, 50)) {
 						_.s(`var[data-ytmsid="${link.dataset.ytmsid}"]:not([data-ytmscroll="false"])`, trigger => {
@@ -1133,14 +1145,14 @@ Whitelist these on Ghostery
 
 	Y.ajax = {
 		load: function (site, id, uri) {
-			console.log('YTMA.ajax.load:', site, id, uri);
+			console.info('ytma//ajax+load(id)', site, id, uri);
 			uri = Y.DB.sites[site].ajax.replace('%key', id).replace('%uri', uri);
 
 			if (Y.DB.sites[site].ajaxExtension) { return this.gmxhr(uri, site, id); }
 
-			console.log('ajax.site?', Y.DB.sites[site].ajax.replace('%key', id).replace('%uri', uri));
+			console.info('ytma//ajax+load(uri)', Y.DB.sites[site].ajax.replace('%key', id).replace('%uri', uri));
 			if (Y.DB.sites[site].ajax) {
-				console.log('preping uri');
+				// console.log('preping uri');
 				return this.xhr(uri, site, id);
 			}
 
@@ -1154,8 +1166,8 @@ Whitelist these on Ghostery
 		loadFromCacheDataset: function ({ ytmsite, ytmid }) {
 			const cache = Y.external.dataFromStorage(ytmsite, ytmid);
 
-			console.log('YTMA.ajax.cache:', ytmsite, ytmid);
-			console.log('@cache:', cache);
+			console.info('ytma//ajax+cache(id)', ytmsite, ytmid);
+			console.info('ytma//ajax+cache(data)', cache);
 
 			if (cache) { Y.external.populate(cache); }
 
@@ -1181,7 +1193,7 @@ Whitelist these on Ghostery
 
 			} catch (e) {
 				if (Y.DB.extension) {
-					console.log('attempting cs xhr');
+					console.info('ytma//gmxhr-cors');
 					this.xhr(uri, site, id);
 				} else {
 					console.log('No applicable CORS request available.');
@@ -1191,7 +1203,7 @@ Whitelist these on Ghostery
 		},
 		xhr: function (uri, site, id) {
 			const x = new XMLHttpRequest();
-			console.log('xhr', uri, id, site);
+			console.info('ytma//xhr', uri, id, site);
 
 			Y.ajax.preProcess(id);
 
@@ -1210,11 +1222,11 @@ Whitelist these on Ghostery
 			};
 
 			try {
-				console.log('sending');
+				// console.info('ytma//xhr+sending');
 				x.open('get', uri, true);
 				x.send();
 			} catch (e) {
-				console.error('Cannot send xhr', uri);
+				console.error('ytma//xhr+failed(cannot send xhr)', uri);
 				Y.ajax.failure.call({ id });
 				console.error(e);
 			}
@@ -1386,7 +1398,7 @@ Whitelist these on Ghostery
 					console.error('Could not parse this time.');
 				}
 
-				console.log({ a, b, p });
+				console.info('ytma//time+array', { a, b, p });
 				return p;
 			},
 			fromIso8601: function (iso8601) {
@@ -1479,31 +1491,6 @@ Whitelist these on Ghostery
 			}
 		},
 		extension: window.chrome && window.chrome.extension,
-		views: {
-			getAllSiteRegExps: function () {
-				const regs = Object.values(Y.DB.sites)
-					.filter(({ reg }) => reg)
-					.map(({ reg }) => reg);
-
-				return new RegExp(`\\b${regs.join('|')}`);
-			},
-			getAllSiteSelectors: function () {
-				const sels = Object.values(Y.DB.sites)
-					.filter(({ selector }) => selector)
-					.map(({ selector }) => selector);
-
-				return sels.join();
-			},
-			getPlayerSources: function (siteName) {
-				return Y.DB.sources[siteName] || Y.DB.sources.iframe;
-			},
-			getPlayerDimmensions: function (ratio, size) {
-				return `ytm_panel ytm_block ytm_panel-${Y.DB.playerSize.ratios[ratio]} ytm_panel-${Y.DB.playerSize.sizes[size]}`;
-			},
-			getPlayerQuality: function (quality) {
-				return Y.DB.qualities[quality] || Y.DB.qualities[360];
-			}
-		},
 		sites: { // supported sites - to add more also make a parser (if api is available) and add an item to sources (if necessary)
 			youtube: {
 				title: 'ytma!',
@@ -1615,87 +1602,6 @@ Whitelist these on Ghostery
 				slim: true,
 				scroll: true
 			}
-		},
-		sources: {
-			iframe: function (data) {
-				const key = Y.DB.sites[data.site].key;
-
-				return [
-					{ type: 'text/html', src: Y.DB.sites[data.site].embed.replace('%key', data[key]) }
-				];
-			},
-			'html5-audio': function ({ uri }) {
-				return [
-					{ type: 'audio/mp3', src: uri }
-				];
-			},
-			html5: function ({ uri }) {
-				// attaching the type as either mp4 or webm
-
-				if (/(?:webm)/.test(uri)) {
-					return [
-						{ type: 'video/webm', src: uri }
-					];
-				}
-
-				return [
-					{ type: 'video/mp4', src: uri },
-					{ type: 'video/webm', src: uri },
-					{ type: 'video/ogg; codecs="theora, vorbis"', src: uri }
-				];
-			},
-			imgur: function ({ id }) {
-				const src = Y.DB.sites.imgur.embed.replace('%key', id);
-
-				return [
-					{ type: 'video/webm', src: `${src}.webm` },
-					{ type: 'video/mp4', src: `${src}.mp4` }
-				];
-			},
-			youtube: function ({ id }, { quality, start }) {
-				const params = `?html5=1&version=3&modestbranding=1&rel=0&showinfo=1&vq=${quality}&iv_load_policy=${Y.user.preferences.yt_annotation}&start=${start}&rel=0`;
-
-				return [
-					{ type: 'text/html', src: Y.DB.sites.youtube.embed.replace('%key', id) + params }
-				];
-			}
-		},
-		customToolbars: {
-			vine: {
-				ratio: false,
-				size: true
-			},
-			soundcloud: {
-				ratio: false,
-				size: false
-			}
-		},
-		playerSize: {
-			ratios: {
-				1: 'sd',
-				2: 'hd',
-				3: 'pr'
-			},
-			sizes: {
-				0: 'h',
-				240: 's',
-				360: 'm',
-				480: 'l',
-				720: 'xl'
-			},
-			aspects: {
-				1: 4 / 3,
-				2: 16 / 9,
-				3: 16 / 9
-			}
-		},
-		qualities: {
-			240: 'small',
-			360: 'medium',
-			480: 'large',
-			720: 'hd720',
-			1080: 'hd1080',
-			1081: 'highres'
 		}
 	};
 
@@ -1768,8 +1674,8 @@ Whitelist these on Ghostery
 		}
 
 		hideAllPlayers() {
-			const group = Y.collect(this.props.id);
-			console.log('closing all', this.props.id, group.length);
+			const group = Y.collect(this.state.id);
+			console.info('ytma//hide+all(id)', this.state.id, group.length);
 			group.forEach(g => {
 				g.disableOpenOnScroll();
 				g.getControl().hidePlayer();
@@ -1784,7 +1690,7 @@ Whitelist these on Ghostery
 			if (typeof el === 'string') {
 				el = this.projector.querySelector(el);
 			}
-			el.id = type + this.props.uid;
+			el.id = type + this.state.uid;
 			try {
 				this.selected[type].removeAttribute('id');
 			} catch (e) { }
@@ -1808,12 +1714,12 @@ Whitelist these on Ghostery
 
 	/** Trigger is the VAR element */
 	Control.createFromTrigger = t => {
-		console.log('createFromTrigger');
+		// console.info('ytma//trigger');
 		if (t && t.dataset.ytmuid && !Y.set[t.dataset.ytmuid]) {
-			console.log('createFromTrigger-new');
+			console.info('ytma//trigger+new');
 			Y.addToSet(new Control().reactivate(t));
 		}
-		console.log('createFromTrigger-ui');
+		console.info('ytma//trigger+control');
 		return Y.set[t.dataset.ytmuid].getControl();
 	};
 
@@ -1824,22 +1730,22 @@ Whitelist these on Ghostery
 			},
 			close: function () {
 				if (this.site.scroll) {
-					console.log('events.close-1');
+					// console.log('events.close-1');
 					this.hideAllPlayers();
 				} else {
-					console.log('events.close-2');
+					// console.log('events.close-2');
 					this.disableOpenOnScroll();
 					this.hidePlayer();
 				}
 			},
 			ratio: function (li) {
-				const n = parseInt(li.dataset.value, 10);
-				this.play.dimmensions(n);
+				const ratio = parseInt(li.dataset.value, 10);
+				this.play.dimmensions({ ratio });
 				this.markSelected(li, 'ratio');
 			},
 			size: function (li) {
-				const n = parseInt(li.dataset.value, 10);
-				this.play.dimmensions(null, n);
+				const size = parseInt(li.dataset.value, 10);
+				this.play.dimmensions({ size });
 				this.markSelected(li, 'size');
 			}
 		},
@@ -1867,47 +1773,63 @@ Whitelist these on Ghostery
 
 			this.attrs = {
 				sources: null,
-				quality: Y.DB.views.getPlayerQuality(Y.user.preferences.quality),
+				quality: this.quality,
 				size: null,
 				ratio: null,
 				start: this.time(),
 				type: null
 			};
 
-			this.attrs.sources = Y.DB.views.getPlayerSources(parent.props.site)(parent.props, this.attrs);
+			this.attrs.sources = this.sources;
 
 			// todo improve type/media
 			this.attrs.type = this.findType();
 			this.media = Player.makeMedia[this.attrs.type](this);
 
 			this.channel = _.e('div', { className: 'ytm_panel_channel ytm_block' }, this.media, true);
-			this.switcher = _.e('div', { className: `ytm_panel_switcher ytm_panel_size ytm_block ytm_${this.attrs.type}`, _ytmuid: this.parent.props.uid, _standby: true });
+			this.switcher = _.e('div', { className: `ytm_panel_switcher ytm_panel_size ytm_block ytm_${this.attrs.type}`, _ytmuid: this.parent.state.uid, _standby: true });
 			this.panel = _.e('div', { className: 'ytm_panel ytm_block' }, this.switcher, true);
 
-			if (parent.props.site === 'soundcloud' && Y.reg.extra.soundcloud.playlist.test(parent.anchor.href)) {
+			if (parent.state.site === 'soundcloud' && Y.reg.extra.soundcloud.playlist.test(parent.anchor.href)) {
 				this.media.classList.add('ytm_soundcloud-playlist');
 				this.switcher.classList.add('ytm_soundcloud-playlist');
 			}
 
-			this.dimmensions(Y.user.preferences.ratio, Y.user.preferences.size);
+			this.dimmensions(Y.user.preferences);
 		}
 
-		dimmensions(ratio, size) {
+		get sources() {
+			try {
+				return Player.sources[this.parent.state.site](this.parent.state, this.attrs);
+			} catch (e) {
+				console.error(e);
+			}
+		}
+
+		get quality() {
+			return Player.qualities[Y.user.preferences.quality] || Player.qualities[360];
+		}
+
+		get className() {
+			return `ytm_panel ytm_block ytm_panel-${Player.dimms.ratios[this.attrs.ratio]} ytm_panel-${Player.dimms.sizes[this.attrs.size]}`;
+		}
+
+		dimmensions({ ratio, size }) {
 			this.attrs.ratio = isNumber(ratio) ? ratio : this.attrs.ratio;
 			this.attrs.size = isNumber(size) ? size : this.attrs.size;
-			this.panel.className = Y.DB.views.getPlayerDimmensions(this.attrs.ratio, this.attrs.size);
+			this.panel.className = this.className;
 		}
 
 		time() {
 			try {
 				// debugger;
-				const m = this.parent.props.uri.match(Y.reg.time).slice(1, 4);
+				const m = this.parent.state.uri.match(Y.reg.time).slice(1, 4);
 				return ((+m[0] || 0) * 60 * 60) + ((+m[1] || 0) * 60) + (+m[2] || 0);
 			} catch (e) { return 0; }
 		}
 
 		findType() {
-			if (this.parent.props.site === 'html5-audio') { return 'audio'; }
+			if (this.parent.state.site === 'html5-audio') { return 'audio'; }
 			if (this.parent.site.videoTag) { return 'video'; }
 			return 'iframe';
 		}
@@ -1916,7 +1838,7 @@ Whitelist these on Ghostery
 			// console.log('removed media');
 
 			if (this.media.pause) {
-				console.log('pausing');
+				// console.log('pausing');
 				this.media.pause();
 			}
 
@@ -1950,6 +1872,80 @@ Whitelist these on Ghostery
 			return this.mode === 'standby';
 		}
 	}
+
+	Player.sources = {
+		iframe: function (data) {
+			const key = Y.DB.sites[data.site].key;
+
+			return [
+				{ type: 'text/html', src: Y.DB.sites[data.site].embed.replace('%key', data[key]) }
+			];
+		},
+		'html5-audio': function ({ uri }) {
+			return [
+				{ type: 'audio/mp3', src: uri }
+			];
+		},
+		html5: function ({ uri }) {
+			// attaching the type as either mp4 or webm
+
+			if (/(?:webm)/.test(uri)) {
+				return [
+					{ type: 'video/webm', src: uri }
+				];
+			}
+
+			return [
+				{ type: 'video/mp4', src: uri },
+				{ type: 'video/webm', src: uri },
+				{ type: 'video/ogg; codecs="theora, vorbis"', src: uri }
+			];
+		},
+		imgur: function ({ id }) {
+			const src = Y.DB.sites.imgur.embed.replace('%key', id);
+
+			return [
+				{ type: 'video/webm', src: `${src}.webm` },
+				{ type: 'video/mp4', src: `${src}.mp4` }
+			];
+		},
+		youtube: function ({ id }, { quality, start }) {
+			const params = `?html5=1&version=3&modestbranding=1&rel=0&showinfo=1&vq=${quality}&iv_load_policy=${Y.user.preferences.yt_annotation}&start=${start}&rel=0`;
+
+			return [
+				{ type: 'text/html', src: Y.DB.sites.youtube.embed.replace('%key', id) + params }
+			];
+		}
+	};
+
+	Player.dimms = {
+		ratios: {
+			1: 'sd',
+			2: 'hd',
+			3: 'pr'
+		},
+		sizes: {
+			0: 'h',
+			240: 's',
+			360: 'm',
+			480: 'l',
+			720: 'xl'
+		},
+		aspects: {
+			1: 4 / 3,
+			2: 16 / 9,
+			3: 16 / 9
+		}
+	};
+
+	Player.qualities = {
+		240: 'small',
+		360: 'medium',
+		480: 'large',
+		720: 'hd720',
+		1080: 'hd1080',
+		1081: 'highres'
+	};
 
 	Player.css = {
 		item: function (key, value) {
@@ -1992,20 +1988,20 @@ Whitelist these on Ghostery
 		sizes: (() => {
 			const merge = {};
 
-			_.o(Y.DB.playerSize.sizes, (num, size) => {
+			_.o(Player.dimms.sizes, (num, size) => {
 				if (num >= 0) {
 					merge[size] = {};
 
-					_.o(Y.DB.playerSize.ratios, (k, ratio) => {
+					_.o(Player.dimms.ratios, (k, ratio) => {
 						if (ratio === 'pr') {
 							const w = Math.floor(num * 0.95); // smaller than the normal sizes
 							merge[size][ratio] = {
 								width: w,
-								height: Math.floor(w * Y.DB.playerSize.aspects[k])
+								height: Math.floor(w * Player.dimms.aspects[k])
 							};
 						} else {
 							merge[size][ratio] = {
-								width: Math.floor(num * Y.DB.playerSize.aspects[k]),
+								width: Math.floor(num * Player.dimms.aspects[k]),
 								height: num
 							};
 						}
