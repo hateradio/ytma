@@ -238,7 +238,7 @@ Whitelist these on Ghostery
 				if (found) listener.call(found, event);
 			};
 
-			types.forEach(type => element.addEventListener(type, fn, false));
+			types.forEach(type => element.addEventListener(type, fn, true));
 		},
 		debounce: (fn, delay = 250) => {
 			let timeout;
@@ -259,27 +259,26 @@ Whitelist these on Ghostery
 	const strg = {
 		MAX: 5012,
 		on: false,
-		test: function () {
+		test: () => {
 			try {
-				let a;
-				const b = localStorage;
+				const l = localStorage;
 				const c = Math.random().toString(16).substr(2, 8);
-				b.setItem(c, c); a = b.getItem(c); return a === c ? !b.removeItem(c) : false;
+				l.setItem(c, c);
+				return l.getItem(c) === c ? !l.removeItem(c) : false;
 			} catch (e) { return false; }
 		},
-		read: function (key) {
+		read: (key) => {
 			try {
 				return JSON.parse(localStorage.getItem(key));
 			} catch (e) {
-				console.error(`${e.lineNumber}:${e.message}`);
-				return undefined;
+				return console.error(`${e.lineNumber}:${e.message}`);
 			}
 		},
-		save: function (key, val) { return this.on ? !localStorage.setItem(key, JSON.stringify(val)) : false; },
-		wipe: function (key) { return this.on ? !localStorage.removeItem(key) : false; },
-		zero: function (o) { let k; for (k in o) { if (o.hasOwnProperty(k)) { return false; } } return true; },
-		grab: function (key, def) { const s = strg.read(key); return strg.zero(s) ? def : s; },
-		size: function () {
+		save: (key, val) => strg.on ? !localStorage.setItem(key, JSON.stringify(val)) : false,
+		wipe: key => strg.on ? !localStorage.removeItem(key) : false,
+		zero: o => { for (let k in o) { if (o.hasOwnProperty(k)) { return false; } } return true; }, // check if the object is empty
+		grab: (key, def) => { const s = strg.read(key); return strg.zero(s) ? def : s; },
+		size: () => {
 			let length = 0;
 			let key;
 			try {
@@ -291,7 +290,7 @@ Whitelist these on Ghostery
 			} catch (e) { }
 			return 3 + ((length * 16) / (8 * 1024));
 		},
-		full: function () {
+		full: () => {
 			try {
 				const date = +(new Date());
 				localStorage.setItem(date, date);
@@ -304,7 +303,7 @@ Whitelist these on Ghostery
 				}
 			}
 		},
-		init: function () { this.on = this.test(); }
+		init: () => { strg.on = strg.test(); }
 	};
 	strg.init();
 
@@ -442,11 +441,11 @@ Whitelist these on Ghostery
 	class Container extends Y {
 
 		createInterface() {
-			this.site = Y.DB.sites[this.state.site];
-			this.updateAnchor();
-
-			const { ajax, slim } = this.site;
 			const { state } = this;
+			this.site = Y.DB.sites[state.site];
+			const { ajax, slim } = this.site;
+
+			this.updateAnchor();
 
 			this.body = _.e('div', {
 				id: `w${state.uid}`,
@@ -462,7 +461,7 @@ Whitelist these on Ghostery
 			this.anchor.insertAdjacentElement('afterend', this.body);
 
 			try {
-				Container.decorators[this.state.site](this);
+				Container.decorators[state.site].gui(this);
 			} catch (e) {
 				// meh
 			}
@@ -566,34 +565,47 @@ Whitelist these on Ghostery
 			control.thumbnail.addEventListener('mouseenter', Y.events.thumb.start, false);
 			control.thumbnail.addEventListener('mouseleave', Y.events.thumb.stop, false);
 			control.anchor.href = this.anchor.href.replace('youtu.be/', 'youtube.com/watch?v=');
+		youtube: {
+			gui: function (control) {
+				control.anchor.href = this.anchor.href.replace('youtu.be/', 'youtube.com/watch?v=');
+			},
+			thumbEvent: _.debounce(function (e) {
+				if (e.type === 'mouseenter') {
+					this.dataset.thumb = ((this.dataset.thumb || 0) + 1) % 3;
+					this.style.backgroundImage = `url(https://i3.ytimg.com/vi/${this.dataset.ytmid}/${(+this.dataset.thumb) + 1}.jpg)`;
+					this.dataset.timeout = window.setTimeout(Container.decorators.youtube.thumbEvent.bind(this, e), 800);
+				} else {
+					window.clearTimeout(this.dataset.timeout);
+				}
+			}, 100)
 		}
 	};
 
-	Y.events = {
-		clicks: function (e) { // YTMA global click dispatcher
-			const t = e.target;
+	Container.events = {
+		setup: () => {
+			_.on(document.body, 'click', 'var[data-ytmuid]', Container.events.fromTarget);
+			_.on(document.body, 'click', 'a[data-ytmdescription]', Container.events.manualLoad);
+			_.on(document.body, 'dblclick', 'q[data-full]', Container.events.titleToggle);
 
-			if (t) {
-				// console.log('YTMA.clicks');
-				if (t.tagName === 'VAR' && t.dataset.ytmuid) { // trigger the ui
-					console.info('ytma//click+trig(id)', t.dataset.ytmuid);
-					Control.createFromTrigger(t).showPlayer();
-				} else if (t.dataset.ytmdescription) {
-					console.info('ytma//click+desc(id)', t.dataset.ytmid);
-					Y.external.events.manualLoad(e);
-				}
+			_.on(document.body, 'mouseenter mouseleave', '.ytm_site_youtube span.ytm_trigger', Container.decorators.youtube.thumbEvent);
+		},
+		fromTarget: ({ target }) => { // trigger the ui
+			console.info('ytma//click+trig(id)', target.dataset.ytmuid);
+			Control.createFromTrigger(target).showPlayer();
+		},
+		manualLoad: e => {
+			e.preventDefault();
+			const { target } = e;
+			console.info('ytma//click+desc(id)', target.dataset.ytmid);
+			if ((target.dataset.tries || 0) <= 4) {
+				Y.ajax.loadFromDataset(target.dataset);
 			}
 		},
-		thumb: {
-			start: function (e) {
-				const el = e.target;
-				el.dataset.thumb = el.dataset.thumb > 0 ? (el.dataset.thumb % 3) + 1 : 2;
-				el.style.backgroundImage = `url(https://i3.ytimg.com/vi/${el.dataset.ytmid}/${el.dataset.thumb}.jpg)`;
-				el.dataset.timeout = window.setTimeout(Y.events.thumb.start.bind(this, e), 800);
-			},
-			stop: function ({ target }) {
-				window.clearTimeout(target.dataset.timeout);
-			}
+		titleToggle: e => {
+			const target = e.target;
+			target.classList.toggle('ytm_descr_open');
+			target.textContent = target.textContent.length < 140 ? target.dataset.full : `${target.dataset.full.substr(0, 130)} . . .`;
+			target.removeAttribute('style');
 		}
 	};
 
@@ -690,8 +702,7 @@ Whitelist these on Ghostery
 							loop();
 						}
 
-						document.body.addEventListener('click', Y.events.clicks, false);
-						_.on(document.body, 'dblclick', 'q[data-full]', Y.external.events.titleToggle);
+						Container.events.setup();
 					}
 				}
 			},
@@ -1451,21 +1462,6 @@ Whitelist these on Ghostery
 			if (this.db && this.db[site]) {
 				return this.db[site][id];
 			}
-		},
-		events: {
-			manualLoad: function (e) {
-				e.preventDefault();
-				if ((e.target.dataset.tries || 0) <= 4) {
-					Y.ajax.loadFromDataset(e.target.dataset);
-				}
-			},
-			titleToggle: function (e) {
-				e.preventDefault();
-				const target = e.target;
-				target.classList.toggle('ytm_descr_open');
-				target.textContent = target.textContent.length < 140 ? target.dataset.full : `${target.dataset.full.substr(0, 130)} . . .`;
-				target.removeAttribute('style');
-			}
 		}
 	};
 	Y.external.db = strg.grab(Y.external.version, {});
@@ -1700,7 +1696,9 @@ Whitelist these on Ghostery
 		X: 720
 	};
 
-	/** Trigger is the VAR element */
+	/** Trigger is the VAR element
+	 * @param {HTMLElement} t VAR element
+	 */
 	Control.createFromTrigger = t => {
 		// console.info('ytma//trigger');
 		if (t && t.dataset.ytmuid && !Y.set[t.dataset.ytmuid]) {
@@ -1738,19 +1736,17 @@ Whitelist these on Ghostery
 			}
 		},
 		videoBar: function ({ target }) {
-			const el = target;
-
-			if (el.tagName.toLowerCase() === 'li' && el.dataset && el.dataset.type) {
-				const t = el.dataset.type;
+			if (target.tagName.toLowerCase() === 'li' && target.dataset && target.dataset.type) {
+				const t = target.dataset.type;
 				if (Control.events.$fire[t]) {
-					Control.events.$fire[t].call(this, el);
+					Control.events.$fire[t].call(this, target);
 				}
 			}
 		}
 	};
 
 	/** P L A Y E R CLASS
-	 *  @param parent YTMA instance
+	 *  @param {Control} parent Instance
 	 */
 	class Player {
 
