@@ -561,10 +561,6 @@ Whitelist these on Ghostery
 	};
 
 	Container.decorators = { // modify interface according to site
-		youtube: function (control) {
-			control.thumbnail.addEventListener('mouseenter', Y.events.thumb.start, false);
-			control.thumbnail.addEventListener('mouseleave', Y.events.thumb.stop, false);
-			control.anchor.href = this.anchor.href.replace('youtu.be/', 'youtube.com/watch?v=');
 		youtube: {
 			gui: function (control) {
 				control.anchor.href = this.anchor.href.replace('youtu.be/', 'youtube.com/watch?v=');
