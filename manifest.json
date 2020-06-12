@@ -6,8 +6,6 @@
       ],
       "matches": [
         "https://vine.co/v/*/embed/simple",
-        "*://*.youtube-nocookie.com/embed/*",
-        "*://*.youtube.com/embed/*",
         "https://gfycat.com/iframe/*",
         "*://*.neogaf.com/threads/*",
         "*://*.resetera.com/threads/*"
@@ -33,5 +31,5 @@
     "https://*.youtube-nocookie.com/embed/*"
   ],
   "short_name": "ytma",
-  "version": "7.9.1"
+  "version": "8.0.0"
 }

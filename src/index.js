@@ -1,361 +1,9 @@
-// ==UserScript==
-// Do not modify and re-release this script!
-// If you would like to add support for other sites, please tell me and I'll put it in the includes.
-
-// @id             youtube-me-again
-// @name           YouTube Me Again!
-// @namespace      hateradio)))
-// @author         hateradio
-// @version        7.9.1
-// @description    ytma! automatically converts YouTube(TM), Vimeo, Vine, Soundcloud, WebM, and MP4 links into real embedded videos.
-// @homepageURL    https://greasyfork.org/en/scripts/1023-youtube-me-again
-// @icon           https://www.dropbox.com/s/b85qmq0bsim407s/ytma32.png?dl=1
-// @icon64         https://www.dropbox.com/s/5zw3al38yf39wxb/ytma64.png?dl=1
-// @screenshot     https://www.dropbox.com/s/syy9916b1prygl9/ytmascreen5.png?dl=1
-
-// @include        https://vine.co/v/*/embed/simple
-// @match          https://vine.co/v/*/embed/simple
-
-// @include        https://gfycat.com/iframe/*
-// @match          https://gfycat.com/iframe/*
-
-// @include        http*://*.neogaf.com/threads/*
-// @include        http*://*.resetera.com/threads/*
-
-// @match          *://*.neogaf.com/threads/*
-// @match          *://*.resetera.com/threads/*
-
-// @updated        22 Jan 2019
-
-// @grant          GM.xmlhttpRequest
-// @grant          GM_xmlhttpRequest
-
-// @run-at         document-end
-// ==/UserScript==
-
-/*
-
-## Updates
-
-#### 8
-
-* Update YTMA to ESNext
-
-#### 7.9.1
-
-* Fix: (XenoForo) Ignore links in more text areas
-
-#### 7.9
-
-* Fix: (XenoForo) Ignore links in text areas
-
-#### 7.8
-
-* Fix iFrame selectors
-* Adds a monitoring interface to check for updated pages
-
-#### 7.7
-
-* New: YTMA will now try to find new links on AJAX-loaded posts on ResetEra
-* Reverts Gfycat iFrame support; removes video tag for wider support
-* Removes an outdated Chrome blacklist
-
-#### 7.6
-
-* Fix: overrides resetera support of embeded videos
-
-#### 7.5
-
-* New: Support for ResetEra
-* Fix: Parses hours from YouTube URLs
-
-#### 7.2.2
-
-* Updates YouTube iFrame to hide related video feature when pausing
-
-#### 7.2.1
-
-* New: Extension info
-* Updates JSHint options
-* Removes outdated @include links
-
-#### 7.2
-
-* New: CSS rule to make videos fit within smaller windows
-* New: GitHub repository and update links
-* New: Streamable favicon
-* Fix: Vimeo favicon
-
-#### 7.1
-
-* HTTPS links for Vimeo and Gfycat
-* Fix: Safari bug
-
-#### 7
-
-* New: NeoGAF HTTPS Support
-* New: Streamable.com added
-* New: Soundcloud playlist support
-* Improved time parser
-* Upon scrolling, cached descriptions are shown
-* Code reorganization makes adding new media sites easier
-
-### 6
-
-* New: Imgur GIFV (WEBM/MP4) support
-* New: Button to remove cache (descriptions/thumbnail links/etc)
-* New: SoundCloud playlist support
-* Default video quality is now 720p/HD
-* Soundcloud now uses HTML5 player
-* Players that open on scroll will no longer trigger the opening of players higher on the page
-* Adds HTML5, Gfycat, Imgur icons on links
-* Improved Soundcloud and GfyCat URL matchers
-* Restructured code base to simplify creation of media controls
-* Restructured CSS
-* Patched back Gfycat iFrame setting for Safari (it is incompatible with new settings)
-* Updates YouTube data API
-* Removes:
-	* Object tag for YouTube for Flash (Deprecated)
-	* "Batch" loading of descriptions (Only manual and scroll methods are supported)
-
-// #Updates
-
-Whitelist these sites on NoScript/NotScript/etc.
-------------------------------------------------
-
-* neogaf.com
-* youtube.com
-* youtube-nocookie.com
-* googlevideo.com (HTML5 player sends videos from this domain)
-* googleapis.com (YT video descriptions)
-* vimeo.com
-* vimeocdn.com
-* soundcloud.com
-* sndcdn.com
-* vineco.com
-* vine.com
-* vine.co
-* gfycat.com
-* github.io
-
-
-Whitelist these on Ghostery
----------------------------
-
-* SoundCloud (Widgets, Audio / Music Player)
-
- */
-
+import { isNumber, removeSearch, on, debounce } from './modules/Helpers';
+import _ from './modules/_';
+import strg from './modules/strg';
+import update from './modules/update';
 
 (() => {
-	const isNumber = n => !isNaN(parseFloat(n)) && isFinite(n);
-
-	const removeSearch = (uri, keepHash) => {
-		// removes search query from a uri
-		const s = uri.indexOf('?');
-		const h = uri.indexOf('#');
-		let hash = '';
-		if (s > -1) {
-			if (keepHash && h > -1) {
-				hash = uri.substr(h);
-			}
-			uri = uri.substr(0, s) + hash;
-		}
-		return uri;
-	};
-
-	if (!Element.prototype.matches)
-		Element.prototype.matches = Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector;
-
-	if (!Element.prototype.closest) {
-		Element.prototype.closest = function (s) {
-			let el = this;
-			if (!document.documentElement.contains(el)) return null;
-			do {
-				if (el.matches(s)) return el;
-				el = el.parentElement || el.parentNode;
-			} while (el !== null && el.nodeType === 1);
-			return null;
-		};
-	}
-
-	// H E L P E R Handle
-	const _ = {
-		s: (selector, cb) => {
-			const elements = _.x(selector);
-			elements.some((element, index) => cb(element, index, elements) === false);
-		},
-		o: function (object, cb) {
-			Object.keys(object).some(key => cb(key, object[key], object) === false);
-		},
-		e: function (t, o, e, p) {
-			const c = document.createElement(t);
-			_.o(o, (k, v) => {
-				const b = k.charAt(0);
-				if (b === '_')
-					c.dataset[k.substring(1)] = v;
-				else if (b === '$')
-					c.setAttribute(k.substring(1), v);
-				else
-					c[k] = v;
-			});
-
-			if (e && p) {
-				c.appendChild(e);
-			} else if (e) {
-				e.appendChild(c);
-			}
-			return c;
-		},
-		x: selector => Array.from(document.querySelectorAll(selector)),
-		css: function (text) {
-			if (!this.style) {
-				this.style = document.createElement('style');
-				this.style.type = 'text/css';
-				document.body.appendChild(this.style);
-			}
-			this.style.appendChild(document.createTextNode(`${text}\n`));
-		},
-		js: t => {
-			const j = document.createElement('script');
-			j.type = 'text/javascript';
-			j[/^https?:\/\//i.test(t) ? 'src' : 'textContent'] = t;
-			document.head.appendChild(j);
-		},
-		/**
-		 * @param {HTMLElement} element HTML element
-		 * @param {string} types Space- or coma-separated string of one or more types, eg "click dblclick"
-		 * @param {string} selector CSS selector for the elements to trigger the event on
-		 * @param {Function} listener A callback
-		 */
-		on: (element, types, selector, listener) => {
-			types = types.split(/(?:\s+|,)/).filter(f => f);
-
-			if (types.length === 0) return;
-
-			const fn = event => {
-				const found = event.target.closest(selector);
-				if (found) listener.call(found, event);
-			};
-
-			types.forEach(type => element.addEventListener(type, fn, true));
-		},
-		debounce: (fn, delay = 250) => {
-			let timeout;
-
-			return function (...args) {
-				const timed = () => {
-					timeout = null;
-					fn.apply(this, args);
-				};
-
-				window.clearTimeout(timeout);
-				timeout = window.setTimeout(timed, delay);
-			};
-		}
-	};
-
-	// S T O R A G E HANDLE
-	const strg = {
-		MAX: 5012,
-		on: false,
-		test: () => {
-			try {
-				const l = localStorage;
-				const c = Math.random().toString(16).substr(2, 8);
-				l.setItem(c, c);
-				return l.getItem(c) === c ? !l.removeItem(c) : false;
-			} catch (e) { return false; }
-		},
-		read: (key) => {
-			try {
-				return JSON.parse(localStorage.getItem(key));
-			} catch (e) {
-				return console.error(`${e.lineNumber}:${e.message}`);
-			}
-		},
-		save: (key, val) => strg.on ? !localStorage.setItem(key, JSON.stringify(val)) : false,
-		wipe: key => strg.on ? !localStorage.removeItem(key) : false,
-		zero: o => { for (let k in o) { if (o.hasOwnProperty(k)) { return false; } } return true; }, // check if the object is empty
-		grab: (key, def) => { const s = strg.read(key); return strg.zero(s) ? def : s; },
-		size: () => {
-			let length = 0;
-			let key;
-			try {
-				for (key in window.localStorage) {
-					if (window.localStorage.hasOwnProperty(key)) {
-						length += window.localStorage[key].length;
-					}
-				}
-			} catch (e) { }
-			return 3 + ((length * 16) / (8 * 1024));
-		},
-		full: () => {
-			try {
-				const date = +(new Date());
-				localStorage.setItem(date, date);
-				localStorage.removeItem(date);
-				return false;
-			} catch (e) {
-				if (e.name === 'QuotaExceededError' ||
-					e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
-					return true;
-				}
-			}
-		},
-		init: () => { strg.on = strg.test(); }
-	};
-	strg.init();
-
-	// U P D A T E HANDLE
-	const update = {
-		name: 'ytma!',
-		version: 7910,
-		key: 'ujs_YTMA_UPDT_HR',
-		callback: 'ytmaupdater',
-		page: 'https://greasyfork.org/scripts/1023-youtube-me-again',
-		json: 'https://hateradio.github.io/ytma/update.json',
-		interval: 7,
-		day: (new Date()).getTime(),
-		show: false,
-		time: () => new Date(update.day + (1000 * 60 * 60 * 24 * update.interval)).getTime(),
-		notification: ({ version, page }) => {
-			if (update.version < version) {
-				strg.save(update.key, { date: update.time(), version, page });
-				update.link();
-			}
-		},
-		link: () => {
-			if (update.show) { return; }
-			update.show = true;
-
-			const { page } = strg.read(update.key);
-			const link = `
-				<a href="${page || update.page}" id=updater3 title=Update target=_blank>
-					An update for ${update.name} is available.
-				</a>`;
-
-			_.css(update.css);
-			document.body.insertAdjacentHTML('beforeend', link);
-			_.on(document.body, 'click', '#updater3', e => e.target.style.display = 'none');
-		},
-		check: (opt) => {
-			if (!strg.on) { return; }
-			if (window.chrome && window.chrome.extension) { return; }
-			const stored = strg.read(update.key);
-			let page;
-
-			if (opt || !stored || stored.date < update.day) {
-				page = (stored && stored.page) || update.page;
-				strg.save(update.key, { date: update.time(), version: update.version, page });
-				fetch(update.json).then(res => res.json()).then(update.notification);
-			} else if (update.version < stored.version) {
-				update.link();
-			}
-		},
-		css: '#updater3,#updater3:visited{box-shadow:1px 1px 6px #7776;border-bottom:3px solid #e39c2d;cursor:pointer;color:#555;font-family:sans-serif;font-size:12px;font-weight:700;text-align:justify;position:fixed;z-index:999999;right:10px;top:10px;background:#ebebeb url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgLTM0IDUxMiA1MTIiPjxwYXRoIGZpbGw9IiNlNWViZjUiIGQ9Ik0yNzAuNzgxIDcuNUgyNDEuMjJMOC42NiA0MTAuMzA1bDE0Ljc4MSAyNS42MDFINDg4LjU2bDE0Ljc4LTI1LjYwMXptMCAwIi8+PHBhdGggZmlsbD0iI2Y4ZTg2OCIgZD0iTTQ4LjcwNyA0MDAuOTM0TDI1My4xMjkgNDYuODY3aDUuNzQybDIwNC40MjIgMzU0LjA2N2MtMS4yNzcgMi4yMS0xLjU5NCAyLjc2NS0yLjg3MSA0Ljk3Nkg1MS41NzhjLTEuMjc3LTIuMjEtMS41OTQtMi43NjUtMi44NzEtNC45NzZ6bTAgMCIvPjxwYXRoIGZpbGw9IiNlMzljMmQiIGQ9Ik0yNzUuOTk2IDc2LjUyN2wtMTcuMTI1LTI5LjY2aC01Ljc0Mkw0OC43MDcgNDAwLjkzNGMxLjI3NyAyLjIxIDEuNTk0IDIuNzY1IDIuODcxIDQuOTc2aDM5Ljk5NmMtMS4yNzctMi4yMS0xLjU5Ny0yLjc2NS0yLjg3LTQuOTc2em0wIDAiLz48cGF0aCBmaWxsPSIjY2FkOGVhIiBkPSJNMjc1Ljk5NiAxNi41MzVMMjcwLjc4MSA3LjVIMjQxLjIyTDguNjYgNDEwLjMwNWM2LjU2NyAxMS4zNzkgOC4yMTEgMTQuMjIyIDE0Ljc4MSAyNS42MDFoMzkuOTk2Yy02LjU3LTExLjM3OS04LjIxNC0xNC4yMjItMTQuNzgtMjUuNjAxem0wIDAiLz48cGF0aCBmaWxsPSIjNzI4NjllIiBkPSJNMjcwLjg1NSAzMDIuNDU3aC0yOS43MWMtMy4wMDQtMy4wMDQtNC42OTItNC42ODctNy42OTYtNy42OTFWMTYzLjg2M2g0NS4xMDJ2MTMwLjkwM2MtMy4wMDggMy4wMDQtNC42OTIgNC42ODctNy42OTYgNy42OTF6bTAgMCIvPjxwYXRoIGZpbGw9IiM1MzYyNzUiIGQ9Ik0yNTMuNDUgMTYzLjg2M2gtMjB2MTMwLjkwM2MzLjAwMyAzLjAwNCA0LjY5IDQuNjg3IDcuNjk1IDcuNjkxaDE5Ljk5NmwtNy42OTItNy42OTF6bTAgMCIvPjxwYXRoIGZpbGw9IiM3Mjg2OWUiIGQ9Ik0yMzMuNDUgMzMwLjgxM2g0NS4xdjQ1LjEwMWgtNDUuMXptMCAwIi8+PHBhdGggZmlsbD0iIzUzNjI3NSIgZD0iTTIzMy40NSAzMzAuODEzaDIwdjQ1LjEwMWgtMjB6bTAgMCIvPjxwYXRoIGZpbGw9IiNmZmYiIGQ9Ik0yNzUuOTk2IDE0MS4zNjdIMjYxdi0xNWgxNC45OTZ6bS0yNC45OTYgMGgtMTV2LTE1aDE1em0wIDAiLz48cGF0aCBkPSJNNDAwLjQzIDIxNy4wNTlsLTEyLjk4OSA3LjVMNDk0LjY4IDQxMC4zMDVsLTEwLjQ1IDE4LjEwMUgyNy43N2wtMTAuNDU0LTE4LjEwMUwyNDUuNTQ2IDE1aDIwLjkwN2wxMDcuMjM4IDE4NS43NDYgMTIuOTg5LTcuNUwyNzUuMTEzIDBoLTM4LjIyMkwwIDQxMC4zMDVsMTkuMTEgMzMuMTAxaDQ3My43NzdMNTEyIDQxMC4zMDV6bTAgMCIvPjxwYXRoIGQ9Ik0xMjUuMTU2IDQxMy40MDZINDY0Ljc1bDcuMjAzLTEyLjQ3Mi0yMDguNzUtMzYxLjU2N2gtMTQuNDA2TDQwLjA0NyA0MDAuOTM0bDcuMiAxMi40NzJoNTcuOTEzVjM5OC40MUg1OC44MjRMMjU2IDU2Ljg5bDE5Ny4xNzYgMzQxLjUyaC0zMjguMDJ6bTAgMCIvPjxwYXRoIGQ9Ik0yODYuMDQ3IDIyOS41NTl2LTczLjE5NmgtNjAuMDk4djE0MS41MDhsMTIuMDkgMTIuMDg2aDM1LjkyMmwxMi4wODYtMTIuMDg2VjI0OS41NkgyNzEuMDV2NDIuMDk3bC0zLjMwMSAzLjMwNWgtMjMuNWwtMy4zLTMuMzA1VjE3MS4zNjNoMzAuMXY1OC4xOTZ6bTAgME0yMjUuOTUgMzgzLjQxaDYwLjA5N3YtNjAuMDk4aC02MC4wOTh6bTE1LTQ1LjA5OGgzMC4xdjMwLjEwMmgtMzAuMXptMCAwIi8+PC9zdmc+) no-repeat 10px center;background-size:40px;padding:0 20px 0 60px;height:55px;line-height:55px}#updater3:hover,#updater3:visited:hover{color:#b33a3a !important;border-color:#ce4b30;text-decoration: none;}' // Icon made by Freepik from www.flaticon.com 
-	};
-	update.check();
 
 	/** Y T M A CLASS
 	 * @private
@@ -424,7 +72,7 @@ Whitelist these on Ghostery
 
 		updateAnchor() {
 			if (this.anchor.getElementsByTagName('img').length === 0) {
-				this.anchor.className += ` ytm_link ytm_link_${this.state.site} `;
+				this.anchor.classList.add('ytm_link', `ytm_link_${this.state.site}`);
 			}
 			this.anchor.dataset.ytmid = this.state.id;
 			this.anchor.dataset.ytmuid = this.state.uid;
@@ -565,25 +213,32 @@ Whitelist these on Ghostery
 			gui: function (control) {
 				control.anchor.href = this.anchor.href.replace('youtu.be/', 'youtube.com/watch?v=');
 			},
-			thumbEvent: _.debounce(function (e) {
-				if (e.type === 'mouseenter') {
+			thumbEvent: function (e) {
+				let time = +this.dataset.time || 1;
+				if (this.classList.contains('ytm_trigger') && e.type === 'mouseenter' && time < 50) {
 					this.dataset.thumb = ((this.dataset.thumb || 0) + 1) % 3;
 					this.style.backgroundImage = `url(https://i3.ytimg.com/vi/${this.dataset.ytmid}/${(+this.dataset.thumb) + 1}.jpg)`;
+					window.clearTimeout(this.dataset.timeout);
+					console.log('mouseenter -- clear before setting new ', this.dataset);
 					this.dataset.timeout = window.setTimeout(Container.decorators.youtube.thumbEvent.bind(this, e), 800);
+					console.log('mouseenter -- new timeout', this.dataset);
+					this.dataset.time = time += 1;
 				} else {
 					window.clearTimeout(this.dataset.timeout);
+					this.dataset.time = 0;
+					console.log('mouseleave -- ', this.dataset);
 				}
-			}, 100)
+			}
 		}
 	};
 
 	Container.events = {
 		setup: () => {
-			_.on(document.body, 'click', 'var[data-ytmuid]', Container.events.fromTarget);
-			_.on(document.body, 'click', 'a[data-ytmdescription]', Container.events.manualLoad);
-			_.on(document.body, 'dblclick', 'q[data-full]', Container.events.titleToggle);
+			on(document.body, 'click', 'var[data-ytmuid]', Container.events.fromTarget);
+			on(document.body, 'click', 'a[data-ytmdescription]', Container.events.manualLoad);
+			on(document.body, 'dblclick', 'q[data-full]', Container.events.titleToggle);
 
-			_.on(document.body, 'mouseenter mouseleave', '.ytm_site_youtube span.ytm_trigger', Container.decorators.youtube.thumbEvent);
+			on(document.body, 'mouseenter mouseleave', 'div.ytm_site_youtube span.ytm_trigger', Container.decorators.youtube.thumbEvent);
 		},
 		fromTarget: ({ target }) => { // trigger the ui
 			console.info('ytma//click+trig(id)', target.dataset.ytmuid);
@@ -833,11 +488,16 @@ Whitelist these on Ghostery
 					span.parentElement.removeChild(span);
 				}
 			});
+
+			_.s('[data-s9e-mediaembed-iframe]', s => {
+				const dat = JSON.parse(s.dataset.s9eMediaembedIframe);
+				s.parentElement.parentElement.innerHTML = `<a href="${dat[dat.length - 1]}">youtube</a>`;
+			});
 		},
 		links: function () {
 			_.s(Y.selector.ignore(), ({ dataset }) => dataset.ytmaignore = true);
 
-			const links = _.x(Y.selector.getAllSiteSelectors()).filter(({ dataset }) => {
+			const links = _.qsa(Y.selector.getAllSiteSelectors()).filter(({ dataset }) => {
 				const r = !dataset.ytmaprocessed && !dataset.ytmaignore;
 				dataset.ytmaprocessed = true;
 				return r;
@@ -1100,7 +760,7 @@ Whitelist these on Ghostery
 				Y.user.$form = _.e('div', { className: 'ytm_fix_center ytm_none ytm_box', innerHTML: template }, document.body);
 				Y.user.error = document.getElementById('ytm_settings_error');
 
-				_.on(Y.user.$form, 'keyup click', 'input, label', _.debounce(Y.user.events.save, 500));
+				on(Y.user.$form, 'keyup click', 'input, label', debounce(Y.user.events.save, 500));
 				Y.user.$form.addEventListener('submit', e => e.preventDefault(), false);
 
 				document.getElementById('ytmareset').addEventListener('click', Y.user.events.reset, false);
@@ -1125,7 +785,7 @@ Whitelist these on Ghostery
 		// todo update(site, size, padding)
 		_.css(`
 			.ytm_loading{background:url(${loadingIcon}) 0 3px no-repeat;}
-			.ytm_link{background:url(${Y.DB.sites.youtube.favicon}) 0 center no-repeat !important;margin-left:4px;padding-left:20px!important;}
+			.ytm_link{position:relative !important;background:url(${Y.DB.sites.youtube.favicon}) 0 center no-repeat !important;margin-left:4px;padding-left:20px!important;}
 			.ytm_link.ytm_link_vimeo{background-image:url(${Y.DB.sites.vimeo.favicon}) !important;background-size:12px 12px !important;padding-left:18px!important}
 			.ytm_link.ytm_link_vine{background-image:url(${Y.DB.sites.vine.favicon}) !important;background-size:10px 10px!important;padding-left:16px!important}
 			.ytm_link.ytm_link_soundcloud{background-image:url(${Y.DB.sites.soundcloud.favicon})!important;padding-left:17px!important}
@@ -1135,7 +795,7 @@ Whitelist these on Ghostery
 			.ytm_link.ytm_link_streamable{background-image:url(${Y.DB.sites.streamable.favicon}) !important; background-size: 12px 12px !important;padding-left: 14px !important;}
 		`);
 
-		_.css('.ytm_none,.ytm_link br{display:none!important}.ytm_box{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box}.ytm_block{display:block;position:relative;clear:both;text-align:left;border:0;margin:0;padding:0;overflow:hidden}.ytm_normalize{font-weight:400!important;font-style:normal!important;line-height:1.2!important}.ytm_sans{font-family:Arial,Helvetica,sans-serif!important}.ytm_spacer{overflow:auto;margin:0 0 6px;padding:4px}.ytm_spacer.ytm_site_slim{display:inline}.ytm_clear:after{content:"";display:table;clear:both}.ytm_center{text-align:center}.ytm_link b,.ytm_link strong{font-weight:400!important}.ytm_link u{text-decoration:none!important}.ytm_link i,.ytm_link em{font-style:normal!important}.ytm_trigger{width:118px;height:66px;background-color:#262626!important;cursor:pointer;background-position:-1px -12px;float:left;box-shadow:2px 2px rgba(0,0,0,.3);background-size:auto 90px!important;color:#fff;text-shadow:#333 0 0 2px;font-size:13px}.ytm_trigger:hover{box-shadow:2px 2px #60656b80;opacity:.95}.ytm_trigger var{z-index:2;height:100%;width:100%;position:absolute;left:0;top:0;text-align:right}.ytm_label{display:block;padding:3px 6px;line-height:1.2;font-style:normal}.ytm_init{height:22px;background:rgba(11,11,11,.62);padding:4px 25px 6px 6px}.ytm_site_vine .ytm_trigger{background-color:#90ee90!important;background-size:120px auto!important}.ytm_site_slim .ytm_trigger{background:#e34c26!important;height:auto;box-shadow:0 0 2px #ffdb9d inset,2px 2px rgba(0,0,0,.3);margin:0 3px 0 0;width:auto;transition:all .3s ease-in-out 0s}.ytm_site_slim .ytm_trigger:hover{opacity:.8}.ytm_site_slim .ytm_label{text-shadow:0 0 1px #f06529}.ytm_site_slim .ytm_init{background:transparent}.ytm_bd{float:left;max-width:500px;margin:2px 10px;font-size:12px}.ytm_title{font-weight:700}.ytm_error{color:#cc2f24;font-style:italic}.ytm_loading{font-style:italic;padding:1px 1.5em}.ytm_descr{word-wrap:break-word;max-height:48px;overflow:auto;padding-right:20px}.ytm_descr[data-full]{cursor:pointer}.ytm_descr_open{resize:both;white-space:pre-line;background:linear-gradient(to bottom, rgba(0,0,0,0) 0%,rgba(0,0,0,0) 50%,rgba(0,0,0,0) 80%,rgba(0,0,0,0.1) 100%)}.ytm_descr_open[style]{max-height:none}.ytm_projector{margin-bottom:4px}ul.ytm_options{overflow:hidden;margin:0!important;padding:3px 0 1px;list-style-position:outside!important}.ytm_options li{display:inline;margin:0!important;padding:0!important}.ytm_options li>ul{display:inline-block;margin:0;padding:0 1px 0 0}.ytm_options li ul li{-webkit-user-select:none;-moz-user-select:none;-o-user-select:none;user-select:none;list-style-type:none;cursor:pointer;float:left;color:#858585;border:1px solid #1d1d1d;border-bottom:1px solid #181818;border-top:1px solid #292929;box-shadow:0 0 1px #555;height:14px;font-size:12px!important;line-height:12px!important;background:#222;background:linear-gradient(#2d2c2c,#222);margin:0!important;padding:5px 9px 3px!important}.ytm_options li ul li:first-child{border-radius:2px 0 0 2px}.ytm_options li ul li:last-child{border-left:0!important;border-radius:0 2px 2px 0;margin:0 2px 0 0!important}.ytm_options li ul li:first-child:last-child,.ytm_li_setting{border-radius:2px}.ytm_options li ul li:hover{color:#ccc;text-shadow:1px 1px 0 #333;background:#181818}.ytm_options li ul li[id]{color:#ddd;text-shadow:0 0 2px #444}.ytm_panel_size{background:#000;max-width:100%;}.ytm_panel_switcher[data-standby="true"]{background:#111}.ytm_panel_switcher[data-standby="true"]:after{cursor:cell;color:#0e0e0e;content:"ytma!";display:block;font-size:85px;font-style:italic;font-weight:700;left:50%;position:absolute;text-shadow:2px 1px #181818,-1px -1px #0a0a0a;top:50%;transform:translate(-50%,-50%)}.ytm_site_soundcloud .ytm_panel_size.ytm_soundcloud-playlist{height:334px!important}.ytm_fix_center{background:rgba(51,51,51,.41);height:100%;left:0;position:fixed;top:0;width:100%;z-index:99998}#ytm_settings{z-index:99999;max-width:500px;max-height:85%;overflow:auto;background:#fbfbfb;border:1px solid #bbb;color:#444;box-shadow:0 0 5px rgba(0,0,0,.2),0 0 3px rgba(239,239,239,.1) inset;margin:4% auto;padding:4px 8px 0}#ytm_settings p{margin:5px 0;padding:0}#ytm_settings fieldset{vertical-align:top;border-radius:3px;border:1px solid #ccc;margin:0 0 5px;padding:3px}#ytm_settings legend{padding:3px}#ytm_settings fieldset span{display:inline-block;min-width:5em}#ytm_settings input{vertical-align:baseline!important;margin:3px 5px!important}#ytm_settingst{font-size:110%;border-bottom:1px solid #d00;margin:3px 0 9px;padding:0 3px 3px}#ytm_settings label{cursor:pointer}#ytm_settings small{font-size:90%}#ytm_opts button{cursor:pointer;margin:10px 5px 8px 2px;padding:3px;border:1px solid #adadad;border-radius:2px;background:#eee;font-size:90%}#ytm_opts button:hover{background:#ddd}');
+		_.css('.ytm_none,.ytm_link br{display:none!important}.ytm_box{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box}.ytm_block{display:block;position:relative;clear:both;text-align:left;border:0;margin:0;padding:0;overflow:hidden}.ytm_normalize{font-weight:400!important;font-style:normal!important;line-height:1.2!important}.ytm_sans{font-family:Arial,Helvetica,sans-serif!important}.ytm_spacer{overflow:auto;margin:0 0 6px;padding:4px}.ytm_spacer.ytm_site_slim{display:inline}.ytm_clear:after{content:"";display:table;clear:both}.ytm_center{text-align:center}.ytm_link b,.ytm_link strong{font-weight:400!important}.ytm_link u{text-decoration:none!important}.ytm_link i,.ytm_link em{font-style:normal!important}.ytm_trigger{width:118px;height:66px;background-color:#262626!important;cursor:pointer;background-position:-1px -12px;float:left;box-shadow:2px 2px rgba(0,0,0,.3);background-size:auto 90px!important;color:#fff;text-shadow:#333 0 0 2px;font-size:13px}.ytm_trigger:hover{box-shadow:2px 2px #60656b80;opacity:.95}.ytm_trigger var{z-index:2;height:100%;width:100%;position:absolute;left:0;top:0;text-align:right}.ytm_label{display:block;padding:3px 6px;line-height:1.2;font-style:normal}.ytm_init{height:22px;background:rgba(11,11,11,.62);padding:4px 25px 6px 6px}.ytm_site_vine .ytm_trigger{background-color:#90ee90!important;background-size:120px auto!important}.ytm_site_slim .ytm_trigger{background:#e34c26!important;height:auto;box-shadow:0 0 2px #ffdb9d inset,2px 2px rgba(0,0,0,.3);margin:0 3px 0 0;width:auto;transition:all .3s ease-in-out 0s}.ytm_site_slim .ytm_trigger:hover{opacity:.8}.ytm_site_slim .ytm_label{text-shadow:0 0 1px #f06529}.ytm_site_slim .ytm_init{background:transparent}.ytm_bd{float:left;max-width:450px;margin:2px 10px;font-size:12px}.ytm_title{font-weight:700}.ytm_error{color:#cc2f24;font-style:italic}.ytm_loading{font-style:italic;padding:1px 1.5em}.ytm_descr{word-wrap:break-word;max-height:48px;overflow:auto;padding-right:20px}.ytm_descr[data-full]{cursor:pointer}.ytm_descr_open{resize:both;white-space:pre-line;background:linear-gradient(to bottom, rgba(0,0,0,0) 0%,rgba(0,0,0,0) 50%,rgba(0,0,0,0) 80%,rgba(0,0,0,0.1) 100%)}.ytm_descr_open[style]{max-height:none}.ytm_projector{margin-bottom:4px}ul.ytm_options{overflow:hidden;margin:0!important;padding:3px 0 1px;list-style-position:outside!important}.ytm_options li{display:inline;margin:0!important;padding:0!important}.ytm_options li>ul{display:inline-block;margin:0;padding:0 1px 0 0}.ytm_options li ul li{-webkit-user-select:none;-moz-user-select:none;-o-user-select:none;user-select:none;list-style-type:none;cursor:pointer;float:left;color:#858585;border:1px solid #1d1d1d;border-bottom:1px solid #181818;border-top:1px solid #292929;box-shadow:0 0 1px #555;height:14px;font-size:12px!important;line-height:12px!important;background:#222;background:linear-gradient(#2d2c2c,#222);margin:0!important;padding:5px 9px 3px!important}.ytm_options li ul li:first-child{border-radius:2px 0 0 2px}.ytm_options li ul li:last-child{border-left:0!important;border-radius:0 2px 2px 0;margin:0 2px 0 0!important}.ytm_options li ul li:first-child:last-child,.ytm_li_setting{border-radius:2px}.ytm_options li ul li:hover{color:#ccc;text-shadow:1px 1px 0 #333;background:#181818}.ytm_options li ul li[id]{color:#ddd;text-shadow:0 0 2px #444}.ytm_panel_size{background:#000;max-width:100%;}.ytm_panel_switcher[data-standby="true"]{background:#111}.ytm_panel_switcher[data-standby="true"]:after{cursor:cell;color:#0e0e0e;content:"ytma!";display:block;font-size:85px;font-style:italic;font-weight:700;left:50%;position:absolute;text-shadow:2px 1px #181818,-1px -1px #0a0a0a;top:50%;transform:translate(-50%,-50%)}.ytm_site_soundcloud .ytm_panel_size.ytm_soundcloud-playlist{height:334px!important}.ytm_fix_center{background:rgba(51,51,51,.41);height:100%;left:0;position:fixed;top:0;width:100%;z-index:99998}#ytm_settings{z-index:99999;max-width:500px;max-height:85%;overflow:auto;background:#fbfbfb;border:1px solid #bbb;color:#444;box-shadow:0 0 5px rgba(0,0,0,.2),0 0 3px rgba(239,239,239,.1) inset;margin:4% auto;padding:4px 8px 0}#ytm_settings p{margin:5px 0;padding:0}#ytm_settings fieldset{vertical-align:top;border-radius:3px;border:1px solid #ccc;margin:0 0 5px;padding:3px}#ytm_settings legend{padding:3px}#ytm_settings fieldset span{display:inline-block;min-width:5em}#ytm_settings input{vertical-align:baseline!important;margin:3px 5px!important}#ytm_settingst{font-size:110%;border-bottom:1px solid #d00;margin:3px 0 9px;padding:0 3px 3px}#ytm_settings label{cursor:pointer}#ytm_settings small{font-size:90%}#ytm_opts button{cursor:pointer;margin:10px 5px 8px 2px;padding:3px;border:1px solid #adadad;border-radius:2px;background:#eee;font-size:90%}#ytm_opts button:hover{background:#ddd}');
 	};
 
 	Y.ajax = {
@@ -1780,7 +1440,7 @@ Whitelist these on Ghostery
 
 		get sources() {
 			try {
-				return Player.sources[this.parent.state.site](this.parent.state, this.attrs);
+				return (Player.sources[this.parent.state.site] || Player.sources.iframe)(this.parent.state, this.attrs);
 			} catch (e) {
 				console.error(e);
 			}
@@ -2072,7 +1732,7 @@ Whitelist these on Ghostery
 			this.monitor = this.monitor.bind(this);
 
 			// console.log('YTMA.Scroll Monitor: ', selector);
-			this.bound = _.debounce(this.monitor, delay);
+			this.bound = debounce(this.monitor, delay);
 
 			this.bound();
 			window.addEventListener('scroll', this.bound, false);

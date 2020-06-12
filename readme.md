@@ -19,6 +19,11 @@ Check out the source . . . [https://github.com/hateradio/ytma](https://github.co
 
 ## Updates
 
+#### 8
+
+* Update YTMA to ESNext
+* Fix: (XenoForo) YouTube embed
+
 #### 7.9.1
 
 * Fix: (XenoForo) Ignore links in more text areas
