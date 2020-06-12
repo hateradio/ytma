@@ -1,4 +1,4 @@
-*         text=auto
+*         text=lf
 *.js      eof=lf
 *.md      eof=lf
 

@@ -3,6 +3,13 @@
         "browser": true,
         "greasemonkey": true
     },
+    "parserOptions": {
+        "ecmaVersion": 2018,
+        "sourceType": "module",
+        "ecmaFeatures": {
+            "experimentalObjectRestSpread": true
+          }
+    },
     "extends": "eslint:recommended",
     "rules": {
         "indent": [
