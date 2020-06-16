@@ -4,7 +4,7 @@ import _ from './_';
 // U P D A T E HANDLE
 const update = {
 	name: 'ytma!',
-	version: 8000,
+	version: 8010,
 	key: 'ujs_YTMA_UPDT_HR',
 	callback: 'ytmaupdater',
 	page: 'https://greasyfork.org/scripts/1023-youtube-me-again',

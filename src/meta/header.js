@@ -42,6 +42,10 @@ const monkey = `
 
 ## Updates
 
+#### 8.1
+
+* Fix: Checks for supported embeds
+
 #### 8
 
 * Update YTMA to ESNext

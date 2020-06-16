@@ -19,6 +19,10 @@ Check out the source . . . [https://github.com/hateradio/ytma](https://github.co
 
 ## Updates
 
+#### 8.1
+
+* Fix: Checks for supported embeds
+
 #### 8
 
 * Update YTMA to ESNext
