@@ -1,6 +1,6 @@
 {
   "name": "ytma",
-  "version": "8.0.0",
+  "version": "8.0.1",
   "description": "ytma! automatically converts YouTube(TM), Vimeo, Vine, Soundcloud, WebM, and MP4 links into real embedded videos.",
   "private": true,
   "directories": {

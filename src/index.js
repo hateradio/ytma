@@ -490,8 +490,11 @@ import update from './modules/update';
 			});
 
 			_.s('[data-s9e-mediaembed-iframe]', s => {
-				const dat = JSON.parse(s.dataset.s9eMediaembedIframe);
-				s.parentElement.parentElement.innerHTML = `<a href="${dat[dat.length - 1]}">youtube</a>`;
+				if (Y.DB.sites[s.dataset.s9eMediaembed]) {
+					const dat = JSON.parse(s.dataset.s9eMediaembedIframe);
+					const link = dat[dat.length - 1];
+					s.parentElement.parentElement.innerHTML = `<a href="${link}">${link}</a>`;
+				}
 			});
 		},
 		links: function () {

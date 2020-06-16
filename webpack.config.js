@@ -9,7 +9,7 @@ const header = require('./src/meta/header');
 module.exports = {
     entry: './src/index.js',
     devtool: 'inline-source-map',
-    mode: 'development',
+    mode: 'development', // to-do production
     output: {
         filename: 'ytma.user.js',
         path: path.resolve(__dirname, 'dist')
